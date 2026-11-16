@@ -331,7 +331,7 @@ function itemInfo(e){const L=(e.desc||'').split('\n');const txt=[],get_=[],kv=[]
   ORD.forEach(k=>{const v=g(k);if(v!=null)st.push([k==='攻擊'?'攻擊力':k,v]);});
   const q=e.eq||{};if(q.el)st.push(['屬性',`${q.el} +${q.ea}`]);if(q.rd)st.push(['特殊效果',q.rd==='p'?'降低打擊抵抗':'降低法術抵抗']);
   const pr=g('價格'),wt=g('重量');kv.forEach(x=>st.push(x));
-  if(pr!=null){const v=Number(String(pr).replace(/,/g,''));st.push(['價格',v>=10000?(v/10000).toLocaleString('en-US',{maximumFractionDigits:1})+' 萬兩':v+' 兩']);}if(wt!=null)st.push(['重量',wt]);
+  if(pr!=null){const v=Number(String(pr).replace(/,/g,'')),W=x=>lang!=='en'&&x>=10000?(x/10000).toLocaleString('en-US',{maximumFractionDigits:1})+' 萬兩':x.toLocaleString('en-US')+' 兩';st.push(['基本價格',W(v)]);if(v>0)st.push(['賣 NPC',W(Math.floor(v/3))]);}if(wt!=null)st.push(['重量',wt]);
   const only=q.only&&get('gu'+q.only);
   const body=(txt.length?`<p class="pre" style="margin:0">${esc(txt.join('\n'))}</p>`:'')+(st.length?`<div style="margin-top:${txt.length?12:0}px"><div class="flabel">能力</div><dl class="stats">${st.map(x=>`<div><dt>${esc(x[0])}</dt><dd>${esc(x[1])}</dd></div>`).join('')}</dl></div>`:'')
     +(only?`<p class="small" style="margin:10px 0 0">專用：<a href="#gu${esc(q.only)}">${esc(nm(only))}</a></p>`:'')
@@ -761,11 +761,11 @@ const buyIt=(id,depth)=>depth>0&&!!MNC[id];
 const realPrice=id=>{if(MPR[id]!==''&&MPR[id]!=null)return N(MPR[id]);const m=mkt(id);return m&&m.src!=='NPC'?N(m.p):0;};
 function craftReal(id,path,depth,self){const r=depth<6&&!path.includes(id)&&(self||!buyIt(id,depth))?recipeFor(id):null;
   if(!r||!r.m.length){const p=unitPrice(id);return p>0?p:NaN;}let c=r.fee||0;for(const [m,q] of r.m)c+=q*craftReal(m,[...path,id],depth+1,false);return c/r.y;}
-function cmpChips(id,path,depth){const b=realPrice(id),c=craftReal(id,path,depth,true);if(!(b>0)||!isFinite(c))return'';return chip('買 '+int(b)+' 兩／個',b<c?'hot':'')+chip('合 '+int(Math.round(c))+' 兩／個',c<=b?'hot':'');}
+function cmpChips(id,path,depth){const b=realPrice(id),c=craftReal(id,path,depth,true),both=b>0&&isFinite(c);return(b>0?chip('買 '+int(b)+' 兩／個',both&&b<c?'hot':''):'')+(isFinite(c)?chip('合 '+int(Math.round(c))+' 兩／個',both&&c<=b?'hot':''):'');}
 function cmpNote(id,path,depth){const b=realPrice(id),c=craftReal(id,path,depth,true);if(b>0&&isFinite(c))return'';
-  return`<div class="mline small muted">${b>0?`拍賣所 ${int(b)} 兩／個；有啲材料冇價錢，唔比較`:'拍賣所冇價錢，唔比較'}</div>`;}
-function priceLine(id,n){const u=unitPrice(id),own=MPR[id]!==''&&MPR[id]!=null,m=mkt(id),bp=basePrice(id);
-  const src=own?'自己填嘅價':m?(m.src==='NPC'?'拍賣所 30 日內冇人賣，用賣 NPC 價（機會成本）':`拍賣所 30 日最低（國際服，${new Date(m.ts).toLocaleDateString('zh-HK')}）`):bp?'冇拍賣紀錄，用賣 NPC 價（機會成本）':'冇價錢，要自己填';
+  return`<div class="mline small muted">${b>0?'有啲材料冇價錢，計唔到合成成本':'拍賣所冇價錢，唔比較買定合'}</div>`;}
+function priceLine(id,n){const u=unitPrice(id),own=MPR[id]!==''&&MPR[id]!=null,m=mkt(id),bp=sellPrice(id);
+  const src=own?'自己填嘅價':m?`拍賣所 30 日最低（國際服，${new Date(m.ts).toLocaleDateString('zh-HK')}）`:bp?'拍賣所冇價錢，用賣 NPC 價（機會成本）':'冇價錢，要自己填';
   return`<div class="mline small muted"><input type="number" min="0" step="any" data-mpr="${esc(id)}" data-q="${n}" value="${own?esc(MPR[id]):''}" placeholder="${m?fmt(N(m.p)):bp?fmt(bp):'自己填'}" aria-label="單價"> <span class="nw">× ${fmt(n)} ＝ <b data-msub>${u?int(u*n):'–'}</b> 兩</span><div>${esc(src)}</div></div>`;}
 function expand(id,n,depth,acc,path){const r0=depth<6&&!path.includes(id)?recipeFor(id):null;const can=!!(r0&&r0.m.length);
   if(can&&buyIt(id,depth)){acc.raw[id]=(acc.raw[id]||0)+n;acc.sum+=unitPrice(id)*n;return`<li>${row(id,chip('×'+fmt(n),'cond')+chip('直接買')+cmpChips(id,path,depth))}${priceLine(id,n)}<div class="bar" style="margin:2px 0 6px"><button type="button" class="btn" data-mnc="${esc(id)}">改返自己合</button></div></li>`;}
@@ -780,7 +780,7 @@ function vMats(){const id=ui.mid,n=Math.max(1,N(ui.mn)||1);let out='';
   if(id&&get(id)){const acc={raw:{},fee:0,sum:0,tools:new Set()};const tree=expand(id,n,0,acc,[]);
     const raw=Object.entries(acc.raw).sort((a,b)=>b[1]-a[1]);const total=acc.sum+acc.fee;const miss=raw.filter(([k])=>!unitPrice(k)).length;
     const pb=realPrice(id)*n;
-    out=section('材料同成本',`<p class="small muted" style="margin:0 0 8px">每件中間材料都可以揀「自己合」定「直接買」。每樣材料下面係單價同小計，可以改做自己嘅價（會記住喺呢部機）。冇拍賣價錢嘅材料用賣 NPC 價計（即係唔賣俾 NPC 嘅機會成本）。中間材料要有拍賣所價錢（或者你填嘅價）先會比較「買」同「合」，平啲嗰個會亮起。</p>
+    out=section('材料同成本',`<p class="small muted" style="margin:0 0 8px">每件中間材料都可以揀「自己合」定「直接買」。每樣材料下面係單價同小計，可以改做自己嘅價（會記住喺呢部機）。冇拍賣價錢嘅材料用賣 NPC 價計（即係唔賣俾 NPC 嘅機會成本）。中間材料一定會顯示「合」嘅成本；有拍賣所價錢（或者你填嘅價）先會同「買」比較，平啲嗰個會亮起。</p>
       <div class="bar" style="margin:0 0 8px"><button type="button" class="btn pri" data-mauto="1">自動揀平嘅做法</button>${Object.keys(MNC).length?'<button type="button" class="btn" data-mncclr="1">全部改返自己合</button>':''}${Object.keys(MPR).length?'<button type="button" class="btn" data-mprclr="1">清除自己填嘅單價</button>':''}</div>
       <div class="mcalc" data-fee="${acc.fee}"><div class="mtree"><ul>${tree}</ul></div>
       <div class="mtot">${acc.fee?`<div class="bar between"><span>專業技能手續費</span><span>${int(acc.fee)} 兩</span></div>`:''}<div class="bar between"><b>總成本</b><b><span id="m-total">${int(total)}</span> 兩</b></div>
@@ -798,25 +798,26 @@ function vMats(){const id=ui.mid,n=Math.max(1,N(ui.mn)||1);let out='';
 
 /* ---------- 材料成本 ---------- */
 let MPR=LS.get('gs-mprice',{});let MKT={};
-function loadMkt(){fetch('prices.json?v='+Date.now().toString(36).slice(0,-4)).then(r=>r.ok?r.json():null).then(x=>{if(!x||!x.m)return;const S=v=>v==='N'?'NPC':'拍賣所';
+function loadMkt(){fetch('prices.json?v='+Date.now().toString(36).slice(0,-4)).then(r=>r.ok?r.json():null).then(x=>{if(!x||!x.m)return;const S=()=>'拍賣所';
   const T=d=>d>1e11?d:new Date(Math.floor(d/1e4),Math.floor(d/100)%100-1,d%100,12).getTime();const M={};MKT_WIN=x.win||30;
-  for(const [k,v] of Object.entries(x.m)){const H=((x.h||{})[k]||[]).map(a=>[T(a[0]),a[1],a[2]?S(a[2]):'拍賣所']);M[k]={p:v[0],src:S(v[1]),sv:'gl',ts:v[2]?T(v[2]):x.t,h:H.length?H:(v[1]==='N'?[]:[[v[2]?T(v[2]):x.t,v[0],S(v[1])]])};}
+  for(const [k,v] of Object.entries(x.m)){if(v[1]==='N')continue;const H=((x.h||{})[k]||[]).map(a=>[T(a[0]),a[1],a[2]?S(a[2]):'拍賣所']);M[k]={p:v[0],src:S(v[1]),sv:'gl',ts:v[2]?T(v[2]):x.t,h:H.length?H:(v[1]==='N'?[]:[[v[2]?T(v[2]):x.t,v[0],S(v[1])]])};}
   MKT=M;MKT_T=x.t;if(ui.mid||/^#gi/.test(location.hash))schedule();}).catch(()=>{});}
 let MKT_WIN=30,MKT_T=0;
 loadMkt();
 const mkt=id=>{const m=MKT[id];return m&&N(m.p)>0?m:null;};
 const basePrice=id=>{const e=get(id);const m=e&&String(e.desc||'').match(/價格\s*([\d,]+)/);return m?N(m[1].replace(/,/g,'')):0;};
-const unitPrice=id=>MPR[id]!==''&&MPR[id]!=null?N(MPR[id]):mkt(id)?N(mkt(id).p):basePrice(id);
+const sellPrice=id=>Math.floor(basePrice(id)/3);
+const unitPrice=id=>MPR[id]!==''&&MPR[id]!=null?N(MPR[id]):mkt(id)?N(mkt(id).p):sellPrice(id);
 function priceHist(id){const m=MKT[id];if(!m||!N(m.p))return'';
   const H=(Array.isArray(m.h)?m.h:[]).filter(x=>Array.isArray(x)&&N(x[1])>0).sort((a,b)=>a[0]-b[0]);
-  const dt=t=>new Date(t).toLocaleDateString('zh-HK');const src=x=>x==='NPC'?'NPC 商店價':'拍賣所最低';
+  const dt=t=>new Date(t).toLocaleDateString('zh-HK');const src=()=>'拍賣所最低';
   let svg='';if(H.length>1){const W=600,Hh=140,P=8,xs=H.map(x=>x[0]),ys=H.map(x=>N(x[1]));const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
     const X=v=>P+(x1>x0?(v-x0)/(x1-x0):.5)*(W-2*P),Y=v=>Hh-P-(y1>y0?(v-y0)/(y1-y0):.5)*(Hh-2*P);
     svg=`<svg viewBox="0 0 ${W} ${Hh}" style="width:100%;height:auto;color:var(--accent)" role="img" aria-label="價格走勢"><polyline fill="none" stroke="currentColor" stroke-width="2.5" points="${H.map(x=>X(x[0])+','+Y(N(x[1]))).join(' ')}"/>${H.map(x=>`<circle cx="${X(x[0])}" cy="${Y(N(x[1]))}" r="3.5" fill="currentColor"><title>${dt(x[0])}：${int(N(x[1]))} 兩</title></circle>`).join('')}</svg>
     <div class="bar between small muted"><span>${dt(x0)}</span><span>最低 ${int(y0)}・最高 ${int(y1)} 兩</span><span>${dt(x1)}</span></div>`;}
-  return section('國際服拍賣所歷史價格（Auction）',`<p style="margin:0 0 6px"><b class="big">${int(N(m.p))} 兩</b> <span class="small muted">${m.src==='NPC'?`過去 ${MKT_WIN} 日拍賣所冇人賣，用 NPC 商店價`:`過去 ${MKT_WIN} 日最低（${dt(m.ts)}）`}</span></p>${svg}
+  return section('國際服拍賣所歷史價格（Auction）',`<p style="margin:0 0 6px"><b class="big">${int(N(m.p))} 兩</b> <span class="small muted">過去 ${MKT_WIN} 日最低（${dt(m.ts)}）</span></p>${svg}
    ${H.length?`<details class="fx" style="margin-top:8px"><summary>每日最低價紀錄（${H.length}）</summary><div class="tw"><table class="dt"><tr><th>日期</th><th class="r">單價（兩）</th><th>來源</th></tr>${H.slice().reverse().map(x=>`<tr><td>${dt(x[0])}</td><td class="r">${int(N(x[1]))}</td><td>${src(x[2])}</td></tr>`).join('')}</table></div></details>`:''}
-   <p class="small muted" style="margin:6px 0 0">每日由國際服拍賣所（Auction）自動讀取，同一日只記最低單價；網站顯示同計成本用過去 30 日最低價，30 日內冇人賣嘅材料用 NPC 商店價。</p>`);}
+   <p class="small muted" style="margin:6px 0 0">每日由國際服拍賣所（Auction）自動讀取，同一日只記最低單價；網站顯示同計成本用過去 30 日最低價；30 日內冇人賣嘅材料，計成本時用賣 NPC 價（基本價格 ÷ 3）。</p>`);}
 /* ---------- professional skills ---------- */
 function vPro(){const k=ui.pk||'smith';const L=X.pro?X.pro[k]:[];
   const tab=`<div class="tabs" role="group" aria-label="專業技能">${Object.entries(PRO_L).map(([a,l])=>`<button type="button" data-pk="${a}" aria-pressed="${k===a}">${l}</button>`).join('')}</div>`;
