@@ -21,3 +21,14 @@ for e in I.values():
         if r.get('g') == '幻獸武器': r['d'] = 1
 json.dump(D, open(P, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
 print('ok')
+# Indian village workshops: 交易物品 加德滿都、昌迪加爾；防具 賴普爾、齋浦爾；武器 班加羅爾
+import re
+PAIR = {'加德滿都': '加德滿都、昌迪加爾', '昌迪加爾': '加德滿都、昌迪加爾', '賴普爾': '賴普爾、齋浦爾', '齋浦爾': '賴普爾、齋浦爾', '班加羅爾': '班加羅爾'}
+D = json.load(open(P, encoding='utf-8')); I = D['items']
+n = 0
+for e in I.values():
+    m = re.match(r'^村莊生產（(加德滿都|昌迪加爾|賴普爾|齋浦爾|班加羅爾)，', e.get('note', ''))
+    if m:
+        e['note'] = e['note'].replace(m.group(1) + '，', PAIR[m.group(1)] + '，', 1); n += 1
+json.dump(D, open(P, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
+print('village notes', n)

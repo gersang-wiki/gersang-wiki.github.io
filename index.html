@@ -764,7 +764,8 @@ function altPick(r){if(!r.alt)return r.i;let best=r.i,bp=Infinity;for(const a of
 let MFEE=LS.get('gs-mfee',{}),MWAGE=LS.get('gs-mwage',{});const wageOf=id=>MWAGE[id]!=null&&MWAGE[id]!==''?N(MWAGE[id]):WLR;
 function altPickN(r){const P=a=>{const p=realPrice(a);return p>0?p:Infinity;};return [...r.alt].sort((a,b)=>P(a)-P(b)).slice(0,Math.min(+r.q,r.alt.length));}
 function recipeFor(id){const r=recipeFor0(id);if(r){r.fee0=r.fee||0;r.fee0x=r.feeX||0;if(MFEE[id]!==''&&MFEE[id]!=null){r.fee=N(MFEE[id]);r.ownFee=1;}}return r;}
-function recipeFor0(id){const e=get(id);if(e&&(e.recipe||[]).length)return{y:1,feeX:craftFee(e),fee:craftFee(e)+wlOf(e)*wageOf(id),wl:wlOf(e),wage:wageOf(id),m:e.recipe.filter(r=>/^\d+$/.test(String(r.q))).flatMap(r=>r.alt?(r.d?altPickN(r).map(a=>[a,1,r.g]):[[altPick(r),+r.q,r.g]]):[[r.i,+r.q]]),tools:e.recipe.filter(r=>!/^\d+$/.test(String(r.q))).map(r=>r.i),how:e.by?'NPC':'製作'};
+const vilOf=e=>{const m=String(e&&e.note||'').match(/^(?:村莊生產（|在印度村莊)([^，（(]+?)(?:，|製作)/);return m?m[1]:'';};
+function recipeFor0(id){const e=get(id);if(e&&(e.recipe||[]).length)return{y:+((String(e.note||'').match(/每次\s*(\d+)\s*個/)||[])[1]||1),feeX:craftFee(e),fee:craftFee(e)+wlOf(e)*wageOf(id),wl:wlOf(e),wage:wageOf(id),m:e.recipe.filter(r=>/^\d+$/.test(String(r.q))).flatMap(r=>r.alt?(r.d?altPickN(r).map(a=>[a,1,r.g]):[[altPick(r),+r.q,r.g]]):[[r.i,+r.q]]),tools:e.recipe.filter(r=>!/^\d+$/.test(String(r.q))).map(r=>r.i),how:vilOf(e)?'印度村莊 '+vilOf(e):e.by?'NPC':'製作'};
   const p=proOf(id)[0];if(p)return{y:p[1].n||1,m:p[1].m.map(m=>[m[0],m[1]]),tools:[],how:PRO_L[p[0]],fee:p[1].fee};return null;}
 let MNC=LS.get('gs-mnocraft',{});
 const buyIt=(id,depth)=>depth>0&&!!MNC[id];
