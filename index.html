@@ -485,7 +485,7 @@ function vList(t){
 
 let _mp=null;function monPlaces(){if(_mp&&_mp.size)return _mp;_mp=new Map();for(const [,m] of D.monsters){for(const p of m.at||[])_mp.set(p,(_mp.get(p)||0)+1);for(const p of m.az||[])if(!(m.at||[]).includes(p))_mp.set(p,(_mp.get(p)||0)+1);}return _mp;}
 /* ---------- detail ---------- */
-const pairRows=(arr,key)=>rows((arr||[]).map(d=>row(d.i,d[key]?chip(key==='q'&&/^\d+$/.test(String(d[key]))?'×'+d[key]:d[key],'cond'):'')));
+const pairRows=(arr,key)=>rows((arr||[]).flatMap(d=>d.alt?[`<div class="small muted" style="margin:6px 0 2px">${esc(d.g)} ×${esc(d[key])}（以下任選其一）</div>`,...d.alt.map(a=>row(a,chip('任選','cond')))]:[row(d.i,d[key]?chip(key==='q'&&/^\d+$/.test(String(d[key]))?'×'+d[key]:d[key],'cond'):'')]));
 const RPC={};function rotLoad(n){const c=n%100;if(!RPC[c])RPC[c]=fetch('rp/'+c+'.json?v='+IMGV).then(r=>r.ok?r.json():{}).catch(()=>({}));return RPC[c].then(j=>j[n]);}
 const ROT_ON=false;/* 360° 旋轉圖已備份（rp/），而家顯示固定左下方向圖；改做 true 就會還原旋轉 */
 const IPC={};function idlLoad(n){const c=n%40;if(!IPC[c])IPC[c]=fetch('ip/'+c+'.json?v='+IMGV).then(r=>r.ok?r.json():{}).catch(()=>({}));return IPC[c].then(j=>j[n]);}
@@ -760,7 +760,8 @@ function vCraft(){const L=craftList();const k=ui.ck||'';const q=(ui.cq||'').trim
   <section class="card"><h2>${a.length.toLocaleString('en-US')} 條配方</h2>${rows(a.slice(0,lim).map(r=>row(r.it,chip(r.k)+(r.lv?chip('Lv '+r.lv):''),r.m.map(m=>`${nm(get(m[0]))}${/^\d+$/.test(String(m[1]))?'×'+m[1]:'（'+m[1]+'）'}`).join('、'))))||'<p class="muted" style="margin:0">冇符合嘅配方。</p>'}
   ${a.length>lim?`<div class="more"><button type="button" class="btn" data-more="craft">再顯示 100 條</button></div>`:''}</section>`;}
 /* material calculator */
-function recipeFor(id){const e=get(id);if(e&&(e.recipe||[]).length)return{y:1,fee:craftFee(e)+wlOf(e)*WLR,wl:wlOf(e),m:e.recipe.filter(r=>/^\d+$/.test(String(r.q))).map(r=>[r.i,+r.q]),tools:e.recipe.filter(r=>!/^\d+$/.test(String(r.q))).map(r=>r.i),how:e.by?'NPC':'製作'};
+function altPick(r){if(!r.alt)return r.i;let best=r.i,bp=Infinity;for(const a of r.alt){const p=realPrice(a);if(p>0&&p<bp){bp=p;best=a;}}return best;}
+function recipeFor(id){const e=get(id);if(e&&(e.recipe||[]).length)return{y:1,fee:craftFee(e)+wlOf(e)*WLR,wl:wlOf(e),m:e.recipe.filter(r=>/^\d+$/.test(String(r.q))).map(r=>[altPick(r),+r.q,r.g]),tools:e.recipe.filter(r=>!/^\d+$/.test(String(r.q))).map(r=>r.i),how:e.by?'NPC':'製作'};
   const p=proOf(id)[0];if(p)return{y:p[1].n||1,m:p[1].m.map(m=>[m[0],m[1]]),tools:[],how:PRO_L[p[0]],fee:p[1].fee};return null;}
 let MNC=LS.get('gs-mnocraft',{});
 const buyIt=(id,depth)=>depth>0&&!!MNC[id];
@@ -773,13 +774,13 @@ function cmpNote(id,path,depth){const b=realPrice(id),c=craftReal(id,path,depth,
 function priceLine(id,n){const u=unitPrice(id),own=MPR[id]!==''&&MPR[id]!=null,m=mkt(id),bp=sellPrice(id);
   const src=own?'自己填嘅價':m?`拍賣所 30 日最低（國際服，${new Date(m.ts).toLocaleDateString('zh-HK')}）`:bp?'拍賣所冇價錢，用賣 NPC 價（機會成本）':'冇價錢，要自己填';
   return`<div class="mline small muted"><input type="number" min="0" step="any" data-mpr="${esc(id)}" data-q="${n}" value="${own?esc(MPR[id]):''}" placeholder="${m?fmt(N(m.p)):bp?fmt(bp):'自己填'}" aria-label="單價"> <span class="nw">× ${fmt(n)} ＝ <b data-msub>${u?int(u*n):'–'}</b> 兩</span><div>${esc(src)}</div></div>`;}
-function expand(id,n,depth,acc,path){const r0=depth<6&&!path.includes(id)?recipeFor(id):null;const can=!!(r0&&r0.m.length);
-  if(can&&buyIt(id,depth)){acc.raw[id]=(acc.raw[id]||0)+n;acc.sum+=unitPrice(id)*n;return`<li>${row(id,chip('×'+fmt(n),'cond')+chip('直接買')+cmpChips(id,path,depth))}${priceLine(id,n)}<div class="bar" style="margin:2px 0 6px"><button type="button" class="btn" data-mnc="${esc(id)}">改返自己合</button></div></li>`;}
+function expand(id,n,depth,acc,path,g){const r0=depth<6&&!path.includes(id)?recipeFor(id):null;const can=!!(r0&&r0.m.length);
+  if(can&&buyIt(id,depth)){acc.raw[id]=(acc.raw[id]||0)+n;acc.sum+=unitPrice(id)*n;return`<li>${row(id,chip('×'+fmt(n),'cond')+(g?chip(g+'（任選其一，揀咗最平）'):'')+chip('直接買')+cmpChips(id,path,depth))}${priceLine(id,n)}<div class="bar" style="margin:2px 0 6px"><button type="button" class="btn" data-mnc="${esc(id)}">改返自己合</button></div></li>`;}
   const r=can?r0:null;
-  if(!r){acc.raw[id]=(acc.raw[id]||0)+n;acc.sum+=unitPrice(id)*n;return`<li>${row(id,chip('×'+fmt(n),'cond'))}${priceLine(id,n)}</li>`;}
+  if(!r){acc.raw[id]=(acc.raw[id]||0)+n;acc.sum+=unitPrice(id)*n;return`<li>${row(id,chip('×'+fmt(n),'cond')+(g?chip(g+'（任選其一，揀咗最平）'):''))}${priceLine(id,n)}</li>`;}
   const times=Math.ceil(n/r.y);if(r.fee)acc.fee+=r.fee*times;
   for(const t of r.tools)acc.tools.add(t);
-  return`<li>${row(id,chip('×'+fmt(n),'cond')+chip(r.how)+(r.y>1?chip(`做 ${times} 次`):'')+(r.wl?chip('作業量 '+int(r.wl*times)):'')+(r.fee?chip('費用 '+int(r.fee*times)+' 兩'):'')+(depth>0?cmpChips(id,path,depth):''))}${depth>0?cmpNote(id,path,depth):''}${depth>0?`<div class="bar" style="margin:2px 0 6px"><button type="button" class="btn" data-mnc="${esc(id)}">唔合，直接買</button></div>`:''}<ul>${r.m.map(([m,q])=>expand(m,q*times,depth+1,acc,[...path,id])).join('')}</ul></li>`;}
+  return`<li>${row(id,chip('×'+fmt(n),'cond')+(g?chip(g+'（任選其一，揀咗最平）'):'')+chip(r.how)+(r.y>1?chip(`做 ${times} 次`):'')+(r.wl?chip('作業量 '+int(r.wl*times)):'')+(r.fee?chip('費用 '+int(r.fee*times)+' 兩'):'')+(depth>0?cmpChips(id,path,depth):''))}${depth>0?cmpNote(id,path,depth):''}${depth>0?`<div class="bar" style="margin:2px 0 6px"><button type="button" class="btn" data-mnc="${esc(id)}">唔合，直接買</button></div>`:''}<ul>${r.m.map(([m,q,g2])=>expand(m,q*times,depth+1,acc,[...path,id],g2)).join('')}</ul></li>`;}
 function autoCheap(id){const seen=new Set();const walk=(x,path,depth)=>{const r=depth<6&&!path.includes(x)?recipeFor(x):null;if(!r||!r.m.length)return;for(const [m] of r.m)walk(m,[...path,x],depth+1);
     if(depth>0&&!seen.has(x)){seen.add(x);delete MNC[x];const b=realPrice(x),c=craftReal(x,path,depth,true);if(b>0&&isFinite(c)&&b<c)MNC[x]=1;}};walk(id,[],0);LS.set('gs-mnocraft',MNC);}
 function vMats(){const id=ui.mid,n=Math.max(1,N(ui.mn)||1);let out='';
