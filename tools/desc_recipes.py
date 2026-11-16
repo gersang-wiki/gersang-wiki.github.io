@@ -13,9 +13,10 @@ ALIAS = {'時間粉末': 'gi5507', '畫工卷軸': 'gi1122'}
 GROUP = {'幻獸武器': ['gi3998', 'gi3999', 'gi4000', 'gi4001']}  # filled below by name
 GROUP['幻獸武器'] = [z2k[n] for n in ('瘟神的手鐲', '猿公的手鐲', '虎鶴的項鍊', '雷獸的項鍊') if n in z2k]
 SKIP = re.compile(r'兩$|友好度|貢獻度|^需要\s*\d+\s*日$')
+PRO = {p['it'] for v in D.get('pro', {}).values() if isinstance(v, list) for p in v if isinstance(p, dict) and 'it' in p}
 added = skipped = 0
 for k, e in I.items():
-    if e.get('recipe'): continue
+    if e.get('recipe') or k in PRO: continue  # profession recipes (with batch size) come from D['pro']
     m = re.search(r'^製作：(.*?)[（(](.+)[)）]\s*$', e.get('desc', ''), re.M)
     if not m: continue
     rec, ok = [], True
