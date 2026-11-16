@@ -1266,7 +1266,7 @@ const RELN={win:'剋屬',lose:'被剋屬',even:'互不剋屬',none:'無屬性影
 const SLOTS=[['W','武器','W'],['H','頭盔','H'],['A','盔甲／服裝','AC'],['G','手套','G'],['B','腰帶','B'],['S','鞋子','S'],['R1','戒指','R'],['R2','戒指','R'],['Y','寶珠','Y'],['J','手環','J'],['V','綁腿','V'],['N','項鍊','N'],['P','耳環','P'],['Q','外型裝備','Q'],['X','氣息','X']];
 const codeOf=id=>String(id||'').slice(2);
 function canUse(it,code){const o=it&&it.eq&&it.eq.only;return!o||o===code||((X.grp||{})[o]||[]).includes(code);}
-function eqSum(it){const e=it&&it.eq;if(!e)return'';const a=[];if(e.mn||e.mx)a.push(`攻擊 ${e.mn||0}–${e.mx||0}`);[['s','力量'],['d','敏捷'],['v','體力'],['i','智力'],['at','攻擊力'],['pr','打抗'],['mr','法抗']].forEach(([k,l])=>{if(e[k])a.push(`${l} +${e[k]}`);});if(e.el)a.push(`${e.el}屬性 +${e.ea}`);if(e.lv)a.push(`Lv${e.lv}`);return a.join('　');}
+function eqSum(it){const e=it&&it.eq;if(!e)return'';const a=[];if(e.mn||e.mx)a.push(`攻擊 ${e.mn||0}–${e.mx||0}`);[['s','力量'],['d','敏捷'],['v','體力'],['i','智力'],['at','攻擊力'],['pr','打抗'],['mr','法抗'],['ma','傭兵攻擊'],['md','傭兵防禦']].forEach(([k,l])=>{if(e[k])a.push(`${l} +${e[k]}`);});if(e.el)a.push(`${e.el}屬性 +${e.ea}`);if(e.lv)a.push(`Lv${e.lv}`);return a.join('　');}
 /* trait line → effect */
 function trFx(z){z=z||'';if(!/%[gd]/.test(z))return null;
   if(/屬性值/.test(z)&&/(減少|降低)/.test(z)&&/(敵|怪物|目標|對象)/.test(z))return{k:'eav'};
@@ -1745,7 +1745,7 @@ function vForm(){const S=SY();if(String(ui.fmi||'').startsWith('d'))return vDisp
   <details class="card"><summary><b>陣法書同材料製作（${(S.formCraft||[]).length}）</b></summary><div class="plist">${(S.formCraft||[]).map(([it,m,fee,ty])=>{const x=get(it);return x?`<div class="prow"><span class="pico">${icon(x,36)}</span><div class="pbody"><div class="phead"><a class="pname" href="#${esc(it)}">${esc(nm(x))}</a>${ty?`<span class="chip">${esc(ty)}</span>`:''}${fee?`<span class="chip">${int(fee)} 兩</span>`:''}</div>${matsHtml(m)}</div></div>`:'';}).join('')}</div></details>`;}
 /* ---------- 裝備搜尋 ---------- */
 const GSL=[['W','武器'],['H','頭盔'],['AC','盔甲／服裝'],['G','手套'],['B','腰帶'],['S','鞋子'],['R','戒指'],['Y','寶珠'],['J','手環'],['V','綁腿'],['N','項鍊'],['P','耳環'],['Q','外型'],['X','氣息']];
-const GSO=[['lv','需求等級'],['atk','攻擊'],['s','力量'],['d','敏捷'],['v','體力'],['i','智力'],['ac','防禦'],['pr','打抗'],['mr','法抗']];
+const GSO=[['lv','需求等級'],['atk','攻擊'],['s','力量'],['d','敏捷'],['v','體力'],['i','智力'],['ac','防禦'],['pr','打抗'],['mr','法抗'],['ma','傭兵攻擊'],['md','傭兵防禦']];
 const gval=(e,k)=>k==='atk'?(N(e.mn)+N(e.mx))/2:N(e[k]);
 const timed=x=>/\d+\s*日|不可交易|體驗|期限/.test(x.zh||'');
 function vGear(){const sl=ui.gsl||'W',so=ui.gso||'lv',lvmax=N(ui.glv),who=ui.gw&&get(ui.gw),code=who?codeOf(ui.gw):'';const tm=ui.gtm==='1';
@@ -1764,7 +1764,7 @@ function vGear(){const sl=ui.gsl||'W',so=ui.gso||'lv',lvmax=N(ui.glv),who=ui.gw&
   <section class="card"><div class="plist">${L.slice(0,lim).map(([id,x])=>`<div class="prow"><span class="pico">${icon(x,36)}</span><div class="pbody"><div class="phead"><a class="pname" href="#${esc(id)}">${esc(nm(x))}</a>${x.eq.lv?`<span class="chip">Lv ${x.eq.lv}</span>`:''}${x.sub?`<span class="chip">${esc(x.sub)}</span>`:''}</div><div class="fstat small">${gearStats(x.eq,so)}</div></div></div>`).join('')||'<p class="muted">冇符合條件嘅裝備。</p>'}</div>
    ${L.length>lim?`<div class="more"><button type="button" class="btn" data-more="gear">顯示多 100 件</button></div>`:''}</section>`;}
 function gearStats(e,so){const a=[];if(e.mn||e.mx)a.push(['atk','攻擊',`${e.mn||0}–${e.mx||0}`]);
-  [['s','力量'],['d','敏捷'],['v','體力'],['i','智力'],['ac','防禦'],['pr','打抗'],['mr','法抗'],['at','攻擊力']].forEach(([k,l])=>{if(e[k])a.push([k,l,'+'+e[k]]);});
+  [['s','力量'],['d','敏捷'],['v','體力'],['i','智力'],['ac','防禦'],['pr','打抗'],['mr','法抗'],['at','攻擊力'],['ma','傭兵攻擊'],['md','傭兵防禦']].forEach(([k,l])=>{if(e[k])a.push([k,l,'+'+e[k]]);});
   if(e.el)a.push(['el',e.el+'屬性','+'+e.ea]);
   return a.map(([k,l,v])=>`<span${k===so?' style="color:var(--accent)"':''}>${l} <b>${v}</b></span>`).join('')||'<span>冇額外能力</span>';}
 /* ---------- 練功地點 ---------- */
