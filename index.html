@@ -1317,6 +1317,8 @@ function dStats(){const d=C.d;const m=get(d.who);const st=(m&&m.st)||{};const lv
   const pts=accAt(lv)+N(d.bon);const al={s:N(d.a_s),d:N(d.a_d),v:N(d.a_v),i:N(d.a_i)};const used=al.s+al.d+al.v+al.i;
   const E={s:0,d:0,v:0,i:0,at:0,mn:0,mx:0,ea:0,el:''};
   SLOTS.forEach(([k])=>{const it=get((d.eq||{})[k]);if(!it||!it.eq)return;const e=it.eq;['s','d','v','i','at','mn','mx'].forEach(x=>E[x]+=N(e[x]));if(e.el){E.ea+=N(e.ea);E.el=E.el||e.el;}});
+  E.base=N(st.eld);E.ea+=E.base;E.sets=[];{const cnt=new Map();const seen=new Set();SLOTS.forEach(([k])=>{const id=(d.eq||{})[k];const it=get(id);if(!id||!it)return;(itemSets().get(id)||[]).forEach(st_=>{const key=st_.id+'|'+((it.eq&&it.eq.g)||id);if(seen.has(key))return;seen.add(key);cnt.set(st_,(cnt.get(st_)||0)+1);});});
+   const MAP={'力量':'s','敏捷':'d','體力':'v','智力':'i'};cnt.forEach((n,st_)=>{let used=false;st_.tiers.forEach(([t,fx])=>{if(n<t)return;fx.forEach(f=>{let m=f.match(/^(力量|敏捷|體力|智力)\s*\+\s*(\d+)$/);if(m){E[MAP[m[1]]]+=N(m[2]);used=true;return;}m=f.match(/^.?屬性值\s*\+\s*(\d+)/);if(m){E.ea+=N(m[1]);E.sea=(E.sea||0)+N(m[1]);used=true;}});});if(used)E.sets.push(`${st_.n}（${n} 件）`);});}
   const ov=k=>d['o_'+k]!==''&&d['o_'+k]!=null;
   const S={str:N(st.str)+al.s+E.s+N(d.x_s),dex:N(st.dex)+al.d+E.d+N(d.x_d),vit:N(st.vit)+al.v+E.v+N(d.x_v),int:N(st.int)+al.i+E.i+N(d.x_i)};
   ['str','dex','vit','int'].forEach(k=>{if(ov(k))S[k]=N(d['o_'+k]);});
@@ -1367,7 +1369,7 @@ function vDamage(){const d=C.d;d.eq=d.eq||{};d.tr=d.tr||{};d.tm=d.tm||[];d.tt=d.
  <section class="card" aria-live="polite"><h2>結果</h2><div id="o-d" class="out"></div></section>
  <p class="small muted" style="margin:0">技能公式由遊戲檔讀出。攻擊力 ＝ 角色基本攻擊 ＋ 武器攻擊 ＋ 等級 × 0.6 ＋ 總力量 × 0.4 ＋ 裝備攻擊力（遊戲檔 Character List 寫明嘅公式）。抗性減傷 ＝ ×（215 − 有效抵抗 × 0.8）÷ 500，有效抵抗 0–260。扣抗武器公式（遊戲檔 SkillDamgeFormula）：黑蓮系列 ＝ 1 ＋ 等級 ÷ 4.1，其他 ＝ 1 ＋ 等級 ÷ 5。抗性 0 都只計 43% 傷害，係遊戲本身嘅設計。屬性：火剋風、風剋雷、雷剋水、水剋火、土剋全。</p>`;}
 function calcDamage(){const d=C.d;const o=$('#o-d');if(!o)return;const R=dStats();const S=d.sk&&get(d.sk);
-  const ds=$('#d-stat');if(ds)ds.innerHTML=`<table class="bd"><tr><td>力量／敏捷／體力／智力</td><td>${int(R.S.str)}／${int(R.S.dex)}／${int(R.S.vit)}／${int(R.S.int)}</td></tr><tr><td>攻擊力</td><td>${fmt(R.mn)}–${fmt(R.mx)}</td></tr>${R.E.ea?`<tr><td>裝備屬性值</td><td>${esc(R.E.el)} ${R.E.ea}</td></tr>`:''}</table>`;
+  const ds=$('#d-stat');if(ds)ds.innerHTML=`<table class="bd"><tr><td>力量／敏捷／體力／智力</td><td>${int(R.S.str)}／${int(R.S.dex)}／${int(R.S.vit)}／${int(R.S.int)}</td></tr><tr><td>攻擊力</td><td>${fmt(R.mn)}–${fmt(R.mx)}</td></tr>${R.E.ea?`<tr><td>屬性值</td><td>${R.E.ea} <span class="small muted">（兵本身 ${R.E.base||0}${R.E.ea-(R.E.base||0)-(R.E.sea||0)?` ＋ 裝備 ${R.E.ea-(R.E.base||0)-(R.E.sea||0)}`:''}${R.E.sea?` ＋ 套裝 ${R.E.sea}`:''}）</span></td></tr>`:''}${R.E.sets&&R.E.sets.length?`<tr><td>套裝效果</td><td>${esc(R.E.sets.join('、'))} <span class="small muted">（已計入總能力）</span></td></tr>`:''}</table>`;
   const lf=$('#d-left');if(lf)lf.textContent='剩 '+(R.pts-R.used);
   if(!S||!S.f){o.innerHTML=`<p class="small muted" style="margin:0">${d.who?'呢隻兵冇遊戲檔有公式嘅傷害技能，計唔到。可以喺「我的隊伍」揀另一隻做輸出。':'揀咗輸出兵先計到。'}</p>`;saveC();return;}
   const TF=d.tfx?teamFx(TEAMS[d.tid!=null?d.tid:ui.tmi]):null;if(TF){R.S.str+=TF.s;R.S.dex+=TF.d;R.S.int+=TF.i;R.S.vit+=TF.v;const ad=TF.s*0.4;R.mn+=ad;R.mx+=ad;}

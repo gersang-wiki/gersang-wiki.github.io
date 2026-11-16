@@ -39,7 +39,8 @@ for st in D['sys2'].get('sets', []):
         out = []
         for f in t[1]:
             f = re.sub(r'^M \+(\d+)$', r'法術抵抗 +\1%', f)
-            f = re.sub(r'^全屬性值 \+(\d+)$', r'打擊抵抗 +\1%', f)
+            f = re.sub(r'^全屬性值 \+(\d+)$', r'屬性值 +\1' if st['n'].endswith('屬性套裝') else r'打擊抵抗 +\1%', f)
+            if st['n'].endswith('屬性套裝'): f = re.sub(r'^打擊抵抗 \+(\d+)%$', r'屬性值 +\1', f)
             f = re.sub(r'^屬性值增加(\d+)\((地|土)屬性增加(\d+)\)$', r'屬性值 +\1（\2屬性 +\3）', f)
             out.append(f)
         t[1] = out
