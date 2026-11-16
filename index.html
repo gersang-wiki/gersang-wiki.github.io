@@ -1711,12 +1711,22 @@ function setCard(st,open,cur){const pcs=st.items.map(i=>[i,get(i)]).filter(x=>x[
   return`<details class="card setc"${open?' open':''}><summary class="phead">${pcs[0]?icon(pcs.find(([,x])=>x.eq&&x.eq.g==='W')?.[1]||pcs[0][1],36):''}<span class="pname">${esc(st.n)}</span><span class="chip">${STT[st.t]||'套裝'}</span><span class="chip">最多 ${st.max} 件</span></summary>
    <div class="tw" style="margin-top:8px"><table class="dt"><tr><th class="r">件數</th><th>效果</th></tr>${st.tiers.map(([n,fx])=>`<tr><td class="r">${n} 件</td><td>${fx.map(esc).join('<br>')}</td></tr>`).join('')}</table></div>
    ${setTotalHtml(st)}<div class="small muted" style="margin:8px 0 4px">套裝部件（${pcs.length}）</div><div class="pmats">${pcs.map(([i,x])=>`<a class="pmat"${i===cur?' style="border-color:var(--accent)"':''} href="#${esc(i)}">${icon(x,22)}${esc(nm(x))}</a>`).join('')}</div></details>`;}
+let SCMP=LS.get('gs-scmp',[]);
+function setCmpHtml(L){const sel=SCMP.map(id=>L.find(x=>x.id===id)).filter(Boolean);if(!sel.length)return'';
+  const T=sel.map(st=>setTotal(st));const keys=[];T.forEach(t=>t.T.forEach((v,k)=>{if(!keys.includes(k))keys.push(k);}));
+  const ORD=['防禦','最小攻擊','最大攻擊','力量','敏捷','體力','智力','打擊抵抗','法術抵抗','屬性值'];keys.sort((a,b)=>(ORD.indexOf(a)<0?99:ORD.indexOf(a))-(ORD.indexOf(b)<0?99:ORD.indexOf(b)));
+  const val=(t,k)=>{const v=t.T.get(k);return v?v[0]+v[1]:0;};
+  const head=`<tr><th>能力</th>${sel.map(st=>`<th class="r">${esc(st.n)}<br><button type="button" class="btn small" style="padding:2px 8px;margin-top:4px" data-scmp="${esc(st.id)}">✕ 移除</button></th>`).join('')}</tr>`;
+  const rows=keys.map(k=>{const vs=T.map(t=>val(t,k)),mx=Math.max(...vs),pc=/抵抗/.test(k)?'%':'';return`<tr><td>${esc(k)}</td>${vs.map(v=>`<td class="r">${v?(v===mx&&sel.length>1?`<b style="color:var(--accent)">${int(v)}${pc}</b>`:int(v)+pc):'–'}</td>`).join('')}</tr>`;}).join('');
+  const pcs=`<tr><td>件數</td>${sel.map((st,i)=>`<td class="r">${T[i].pick.length}</td>`).join('')}</tr>`;
+  const ex=T.some(t=>t.txt.length)?`<tr><td>其他效果</td>${T.map(t=>`<td class="r small">${t.txt.map(esc).join('<br>')||'–'}</td>`).join('')}</tr>`:'';
+  return`<section class="card"><h2 style="margin-top:0">套裝比較（${sel.length}）</h2>${sel.length<2?'<p class="small muted" style="margin:0 0 8px">再揀多一套就可以比較。</p>':''}<div class="tw"><table class="dt">${head}${pcs}${rows}${ex}</table></div><p class="small muted" style="margin:8px 0 0">全部係著晒成套嘅總能力（裝備能力 ＋ 套裝效果），每行最高嗰個會亮起。<button type="button" class="btn small" style="padding:2px 8px" data-scmp="*">清除全部</button></p></section>`;}
 function vSets(){const L=SY().sets||[];const q=(ui.sq||'').trim().toLowerCase();const ty=ui.sty||'';
   const R=L.filter(st=>(ty===''||String(st.t)===ty)&&(!q||(st.n+' '+(st.en||'')).toLowerCase().includes(q)||st.tiers.some(t=>t[1].join(' ').toLowerCase().includes(q))||st.items.some(i=>get(i)&&hay(get(i)).includes(q))));
   return`${crumb([['套裝效果']])}<h1>套裝效果</h1><p class="lead">同一套裝備着夠件數就有額外能力。可以搜套裝名、部件名或者效果（例：智力、傷害增加）。</p>
   ${tabsUI('sty',[['','全部（'+L.length+'）'],['0','一般套裝'],['2','將帥套裝']],ty)}
   <label class="f">搜尋<input type="search" id="sq" value="${esc(ui.sq||'')}" placeholder="例：朱雀、貂蟬、法術抵抗"></label>
-  <p class="small muted">${R.length} 套</p><div style="display:grid;gap:10px">${R.map(st=>setCard(st,false)).join('')||'<p class="muted">搵唔到。</p>'}</div>`;}
+  ${setCmpHtml(L)}<p class="small muted">${R.length} 套・撳「加入比較」揀 2 套或以上嚟比較</p><div style="display:grid;gap:10px">${R.map(st=>`<div>${setCard(st,false)}<div class="bar" style="margin:4px 0 0"><button type="button" class="btn small" data-scmp="${esc(st.id)}">${SCMP.includes(st.id)?'✓ 已加入比較':'＋ 加入比較'}</button></div></div>`).join('')||'<p class="muted">搵唔到。</p>'}</div>`;}
 function vDisp(S,di){const x=(S.disp||[])[di];const F=S.form||[];const tabs=tabsUI('fmi',[...F.map((y,i)=>[String(i),y.n]),...(S.disp||[]).map((y,i)=>['d'+i,y.n])],'d'+di);if(!x)return'';const need=x.need&&get(x.need);const book=x.book&&get(x.book);
   return`${crumb([['陣法']])}<h1>陣法</h1><p class="lead">戰鬥陣型：學咗陣法書之後，傭兵按位置排，全隊有額外能力，用材料可以升級。</p>${tabs}
   <section class="card"><h2>${esc(x.n)}</h2><p class="pre" style="margin:0 0 8px">${esc(x.desc)}</p>${need?`<div class="row" style="padding:0">${icon(need,36,'face')}<span class="nm">要擁有：<a href="#${esc(x.need)}">${esc(nm(need))}</a></span></div>`:''}${book?`<div class="small" style="margin-top:6px">陣法書：<a href="#${esc(x.book)}">${icon(book,22)} ${esc(nm(book))}</a></div>`:''}</section>
@@ -1884,6 +1894,7 @@ app.addEventListener('click',async e=>{const t=e.target;let b;
   if((b=t.closest('[data-mncclr]'))){MNC={};LS.set('gs-mnocraft',MNC);render();return;}
   if((b=t.closest('[data-mclear]'))){ui.mid='';render();setTimeout(()=>{const m=$('#mq');if(m)m.focus();});return;}
   if((b=t.closest('[data-matsof]'))){ui.mid=b.dataset.matsof;ui.mn=1;return;}
+  if((b=t.closest('[data-scmp]'))){const v=b.dataset.scmp;if(v==='*')SCMP=[];else SCMP=SCMP.includes(v)?SCMP.filter(x=>x!==v):[...SCMP,v];LS.set('gs-scmp',SCMP);render();return;}
   if((b=t.closest('[data-ecpick]'))){const v=b.dataset.ecpick;if(v.startsWith('x:')){const p=EXPRE[+v.slice(2)];if(p)C.e.mons=p[1].map(m=>['',m[2],m[1],m[0]]);}else{const c=get(v);if(c)C.e.mons=(c.mons||[]).map(m=>[m.i,N(m.q||1)]);}ui.ecq='';saveC();render();return;}
   if((b=t.closest('[data-emadd]'))){C.e.mons=C.e.mons||[];const ex=C.e.mons.find(m=>m[0]===b.dataset.emadd);if(ex)ex[1]=N(ex[1])+1;else C.e.mons.push([b.dataset.emadd,1]);ui.eq='';saveC();render();return;}
   if((b=t.closest('[data-cbrm]'))){const cid=b.dataset.cbrm,i=+b.dataset.i;comboWrite(cid,d=>{d.mons.splice(i,1);});return;}
