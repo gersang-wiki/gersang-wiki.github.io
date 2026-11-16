@@ -768,15 +768,17 @@ function recipeFor0(id){const e=get(id);if(e&&(e.recipe||[]).length)return{y:1,f
   const p=proOf(id)[0];if(p)return{y:p[1].n||1,m:p[1].m.map(m=>[m[0],m[1]]),tools:[],how:PRO_L[p[0]],fee:p[1].fee};return null;}
 let MNC=LS.get('gs-mnocraft',{});
 const buyIt=(id,depth)=>depth>0&&!!MNC[id];
-const realPrice=id=>{if(MPR[id]!==''&&MPR[id]!=null)return N(MPR[id]);const m=mkt(id);return m&&m.src!=='NPC'?N(m.p):0;};
+let TWS=null;const townBuy=id=>{if(!TWS){TWS=new Set();(SY().towns||[]).forEach(t=>(t.goods||[]).forEach(([i])=>TWS.add(i)));if(!TWS.size){TWS=null;return 0;}}return TWS.has(id)&&!faceOf(get(id))?basePrice(id):0;};
+const buySrc=id=>{const m=mkt(id),a=m&&m.src!=='NPC'?N(m.p):0,t=townBuy(id);return a>0&&(!(t>0)||a<=t)?{p:a,k:'A',m}:t>0?{p:t,k:'T'}:null;};
+const realPrice=id=>{if(MPR[id]!==''&&MPR[id]!=null)return N(MPR[id]);const b=buySrc(id);return b?b.p:0;};
 function craftReal(id,path,depth,self){const r=depth<6&&!path.includes(id)&&(self||!buyIt(id,depth))?recipeFor(id):null;
   if(!r||!r.m.length){const p=unitPrice(id);return p>0?p:NaN;}let c=r.fee||0;for(const [m,q] of r.m)c+=q*craftReal(m,[...path,id],depth+1,false);return c/r.y;}
 function cmpChips(id,path,depth){const b=realPrice(id),c=craftReal(id,path,depth,true),both=b>0&&isFinite(c);return(b>0?chip('買 '+int(b)+' 兩／個',both&&b<c?'hot':''):'')+(isFinite(c)?chip('合 '+int(Math.round(c))+' 兩／個',both&&c<=b?'hot':''):'');}
 function cmpNote(id,path,depth){const b=realPrice(id),c=craftReal(id,path,depth,true);if(b>0&&isFinite(c))return'';
   return`<div class="mline small muted">${b>0?'有啲材料冇價錢，計唔到合成成本':'拍賣所冇價錢，唔比較買定合'}</div>`;}
-function priceLine(id,n){const u=unitPrice(id),own=MPR[id]!==''&&MPR[id]!=null,m=mkt(id),bp=sellPrice(id);
-  const src=own?'自己填嘅價':m?`拍賣所 30 日最低（國際服，${new Date(m.ts).toLocaleDateString('zh-HK')}）`:bp?'拍賣所冇價錢，用賣 NPC 價（機會成本）':'冇價錢，要自己填';
-  return`<div class="mline small muted"><input type="number" min="0" step="any" data-mpr="${esc(id)}" data-q="${n}" value="${own?esc(MPR[id]):''}" placeholder="${m?fmt(N(m.p)):bp?fmt(bp):'自己填'}" aria-label="單價"> <span class="nw">× ${fmt(n)} ＝ <b data-msub>${u?int(u*n):'–'}</b> 兩</span><div>${esc(src)}</div></div>`;}
+function priceLine(id,n){const u=unitPrice(id),own=MPR[id]!==''&&MPR[id]!=null,b=buySrc(id),m=b&&b.k==='A'?b.m:null,bp=sellPrice(id);
+  const src=own?'自己填嘅價':m?`拍賣所 30 日最低（國際服，${new Date(m.ts).toLocaleDateString('zh-HK')}）`:b?'城鎮市場買入價（用基本價格；實際會隨存量浮動）':bp?'拍賣所冇價錢，用賣 NPC 價（機會成本）':'冇價錢，要自己填';
+  return`<div class="mline small muted"><input type="number" min="0" step="any" data-mpr="${esc(id)}" data-q="${n}" value="${own?esc(MPR[id]):''}" placeholder="${b?fmt(b.p):bp?fmt(bp):'自己填'}" aria-label="單價"> <span class="nw">× ${fmt(n)} ＝ <b data-msub>${u?int(u*n):'–'}</b> 兩</span><div>${esc(src)}</div></div>`;}
 function expand(id,n,depth,acc,path,g){const r0=depth<6&&!path.includes(id)?recipeFor(id):null;const can=!!(r0&&r0.m.length);
   if(can&&buyIt(id,depth)){acc.raw[id]=(acc.raw[id]||0)+n;acc.sum+=unitPrice(id)*n;return`<li>${row(id,chip('×'+fmt(n),'cond')+(g?chip(g+'（要唔同款，揀咗最平嗰幾件）'):'')+chip('直接買')+cmpChips(id,path,depth))}${priceLine(id,n)}<div class="bar" style="margin:2px 0 6px"><button type="button" class="btn" data-mnc="${esc(id)}">改返自己合</button></div></li>`;}
   const r=can?r0:null;
@@ -790,7 +792,7 @@ function vMats(){const id=ui.mid,n=Math.max(1,N(ui.mn)||1);let out='';
   if(id&&get(id)){const acc={raw:{},fee:0,sum:0,tools:new Set()};const tree=expand(id,n,0,acc,[]);
     const raw=Object.entries(acc.raw).sort((a,b)=>b[1]-a[1]);const total=acc.sum+acc.fee;const miss=raw.filter(([k])=>!unitPrice(k)).length;
     const pb=realPrice(id)*n;
-    out=section('材料同成本',`<p class="small muted" style="margin:0 0 8px">每件中間材料都可以揀「自己合」定「直接買」。每樣材料下面係單價同小計，可以改做自己嘅價（會記住喺呢部機）。冇拍賣價錢嘅材料用賣 NPC 價計（即係唔賣俾 NPC 嘅機會成本）。中間材料一定會顯示「合」嘅成本；有拍賣所價錢（或者你填嘅價）先會同「買」比較，平啲嗰個會亮起。</p>
+    out=section('材料同成本',`<p class="small muted" style="margin:0 0 8px">每件中間材料都可以揀「自己合」定「直接買」。每樣材料下面係單價同小計，可以改做自己嘅價（會記住喺呢部機）。城鎮市場有得買嘅材料用城鎮買入價（基本價格）計，拍賣所平啲就用拍賣價；打返嚟嘅材料拍賣所冇價錢，先用賣 NPC 價計（即係唔賣俾 NPC 嘅機會成本）。中間材料一定會顯示「合」嘅成本；有拍賣所價錢（或者你填嘅價）先會同「買」比較，平啲嗰個會亮起。</p>
       <div class="bar" style="margin:0 0 8px"><button type="button" class="btn pri" data-mauto="1">自動揀平嘅做法</button>${Object.keys(MNC).length?'<button type="button" class="btn" data-mncclr="1">全部改返自己合</button>':''}${Object.keys(MPR).length?'<button type="button" class="btn" data-mprclr="1">清除自己填嘅單價</button>':''}</div>
       <div class="bar" style="margin:0 0 8px;align-items:center"><label class="small" for="m-wl">生產設施作業量單價</label><input id="m-wl" type="number" min="0" inputmode="numeric" data-mwl="1" value="${WLR}" style="width:104px"><span class="small muted">兩／每 1 作業量（最低 1000）</span></div>
       <div class="mcalc" data-fee="${acc.fee}"><div class="mtree"><ul>${tree}</ul></div>
@@ -818,7 +820,7 @@ loadMkt();
 const mkt=id=>{const m=MKT[id];return m&&N(m.p)>0?m:null;};
 const basePrice=id=>{const e=get(id);const f=faceOf(e);if(f)return f;const m=e&&String(e.desc||'').match(/價格\s*([\d,]+)/);return m?N(m[1].replace(/,/g,'')):0;};
 const sellPrice=id=>faceOf(get(id))||Math.floor(basePrice(id)/3);
-const unitPrice=id=>MPR[id]!==''&&MPR[id]!=null?N(MPR[id]):mkt(id)?N(mkt(id).p):sellPrice(id);
+const unitPrice=id=>{if(MPR[id]!==''&&MPR[id]!=null)return N(MPR[id]);const b=buySrc(id);return b?b.p:sellPrice(id);};
 function priceHist(id){const m=MKT[id];if(!m||!N(m.p))return'';
   const H=(Array.isArray(m.h)?m.h:[]).filter(x=>Array.isArray(x)&&N(x[1])>0).sort((a,b)=>a[0]-b[0]);
   const dt=t=>new Date(t).toLocaleDateString('zh-HK');const src=()=>'拍賣所最低';
