@@ -2004,5 +2004,6 @@ async function boot(){render();loadBase();
   db.doc('meta/sources').onSnapshot(s=>{dbSrc=s.exists?JSON.parse(JSON.stringify(s.data()||{})):{};SRC={...baseSrc,...dbSrc};schedule();},()=>{});}
 boot();
 </script>
+<nav class="small muted" style="max-width:1100px;margin:24px auto;padding:0 16px">全部頁面：<a href="https://gersang-wiki.github.io/w/items.html">道具</a> ・ <a href="https://gersang-wiki.github.io/w/mercs.html">傭兵</a> ・ <a href="https://gersang-wiki.github.io/w/monsters.html">怪物</a> ・ <a href="https://gersang-wiki.github.io/w/places.html">地圖</a> ・ <a href="https://gersang-wiki.github.io/w/npcs.html">NPC</a> ・ <a href="https://gersang-wiki.github.io/w/quests.html">任務</a> ・ <a href="https://gersang-wiki.github.io/w/skills.html">技能</a></nav>
 </body>
 </html>
