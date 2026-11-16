@@ -1797,13 +1797,19 @@ function trRe(l){if(TRRE[l])return TRRE[l];const ks=Object.keys(I18N[l]).filter(
   TRRE[l]=ks.length?new RegExp(ks.map(k=>k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|'),'g'):null;return TRRE[l];}
 const PUNC={en:[[/，/g,', '],[/。/g,'. '],[/：/g,': '],[/；/g,'; '],[/（/g,' ('],[/）/g,') '],[/、/g,', '],[/[「」『』]/g,'"'],[/！/g,'! '],[/？/g,'? '],[/｜/g,' | '],[/／/g,' / '],[/＋/g,'+'],[/＝/g,'='],[/－/g,'-'],[/～/g,'~']],
   ko:[[/\(火\)/g,'(불)'],[/\(水\)/g,'(물)'],[/\(風\)/g,'(바람)'],[/\(雷\)/g,'(번개)'],[/\(土\)/g,'(땅)'],[/\(明\)/g,'(명)'],[/\(暗\)/g,'(암)'],[/\(新\)/g,'(신)'],[/\(弱\)/g,'(약)'],[/\(強\)/g,'(강)'],[/，/g,', '],[/。/g,'. '],[/：/g,': '],[/；/g,'; '],[/（/g,' ('],[/）/g,') '],[/、/g,', '],[/[「」『』]/g,'"'],[/！/g,'! '],[/？/g,'? '],[/｜/g,' | '],[/／/g,' / '],[/＋/g,'+'],[/＝/g,'='],[/－/g,'-'],[/～/g,'~']]};
+function trSplit(t){
+  for(const [sep,out] of [['\n','\n'],['｜',' ｜ '],['、',', '],['，',', '],['；','; ']]){if(!t.includes(sep))continue;const P=t.split(sep);const T=P.map(x=>x.trim()?trText(x).trim():x);return T.some((x,i)=>x!==P[i].trim())?T.join(out):null;}
+  let m=t.match(/^([^：\n]{1,14})：([\s\S]+)$/);if(m){const a=trText(m[1]).trim(),b=trText(m[2]).trim();if(a!==m[1].trim()||b!==m[2].trim())return a+': '+b;}
+  m=t.match(/^([\s\S]+?)（([^（）]+)）$/);if(m){const a=trText(m[1]).trim(),b=trText(m[2]).trim();if(a!==m[1].trim()||b!==m[2].trim())return a+' ('+b+')';}
+  return null;}
 function trText(s){if(lang==='zh'||!I18N||!I18N[lang])return s;const D=I18N[lang],G=(lang==='en'&&I18N.eng)||{};const t=s.trim();if(!t||!CJKR.test(t))return s;
   let o=D[t]??G[t];
   if(o==null&&lang==='ko'&&/\([火水風雷土明暗新弱強]\)/.test(t)){let x=t;PUNC.ko.slice(0,10).forEach(([a,b])=>{x=x.replace(a,b);});if(x!==t){const r=trText(x);return s.replace(t,r===x?x:r.trim());}}
   if(o==null&&/\d/.test(t)){const ns=[];const k=t.replace(/\d[\d,\.]*/g,m=>{ns.push(m);return'#';});const v=D[k]??G[k];if(v!=null){let i=0;o=v.replace(/#/g,()=>ns[i++]??'#');}}
+  if(o==null)o=trSplit(t);
   if(o==null){const m1=t.match(/^[^\u4e00-\u9fff]*([\u4e00-\u9fff])[^\u4e00-\u9fff]*$/);if(m1&&(D[m1[1]]??G[m1[1]])!=null)o=t.replace(m1[1],' '+(D[m1[1]]??G[m1[1]])+' ');}
   if(o==null){if(t.length>90)return s;const re=trRe(lang);if(!re)return s;o=t.replace(re,m=>D[m]);if(o===t||CJKR.test(o.replace(/[〇一二三四五六七八九]/g,'')))return s;}
-  if(!CJKR.test(o)||true){PUNC[lang].forEach(([a,b])=>{o=o.replace(a,b);});o=o.replace(/\s{2,}/g,' ').replace(/\s+([,.;:)!?])/g,'$1').replace(/\(\s+/g,'(').trim();}
+  if(!CJKR.test(o)||true){PUNC[lang].forEach(([a,b])=>{o=o.replace(a,b);});o=o.replace(/[ \t]{2,}/g,' ').replace(/[ \t]+([,.;:)!?])/g,'$1').replace(/\(\s+/g,'(').trim();}
   const lead=s.match(/^\s*/)[0],tail=s.match(/\s*$/)[0];return lead+o+tail;}
 const TRA=['placeholder','title','aria-label'];
 function trEl(root){if(!root||!I18N)return;const zh=lang==='zh';
