@@ -32,3 +32,15 @@ for e in I.values():
         e['note'] = e['note'].replace(m.group(1) + '，', PAIR[m.group(1)] + '，', 1); n += 1
 json.dump(D, open(P, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
 print('village notes', n)
+# Set effect labels in the game file are mislabelled: "M" = 法術抵抗(%), "全屬性值" = 打擊抵抗(%), "屬性值增加N(地屬性增加M)" = 屬性值
+D = json.load(open(P, encoding='utf-8'))
+for st in D['sys2'].get('sets', []):
+    for t in st['tiers']:
+        out = []
+        for f in t[1]:
+            f = re.sub(r'^M \+(\d+)$', r'法術抵抗 +\1%', f)
+            f = re.sub(r'^全屬性值 \+(\d+)$', r'打擊抵抗 +\1%', f)
+            f = re.sub(r'^屬性值增加(\d+)\((地|土)屬性增加(\d+)\)$', r'屬性值 +\1（\2屬性 +\3）', f)
+            out.append(f)
+        t[1] = out
+json.dump(D, open(P, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))

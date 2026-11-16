@@ -1700,13 +1700,13 @@ function vAbyss(){const A=SY().abyss||[];const bi=Math.min(A.length-1,N(ui.abb))
 /* ---------- 套裝 / 陣法 ---------- */
 let _iset=null;function itemSets(){if(_iset&&_iset.size)return _iset;_iset=new Map();for(const st of SY().sets||[])for(const i of st.items){if(!_iset.has(i))_iset.set(i,[]);_iset.get(i).push(st);}return _iset;}
 const STT={0:'一般套裝',2:'將帥套裝'};
-function setTotal(st){const seen=new Set(),pick=[];for(const i of st.items){const x=get(i);if(!x)continue;const b=String(x.zh||'').replace(/\s*[-(（]?(不可交易|綁定|帳號綁定)[)）]?\s*$/,'');if(seen.has(b))continue;seen.add(b);pick.push([i,x]);if(pick.length>=st.max)break;}
+function setTotal(st){const seen=new Set(),pick=[],dirty=x=>/[\[［]|不可交易|綁定|\d+日/.test(x.zh||'')?1:0;const cand=st.items.map(i=>[i,get(i)]).filter(x=>x[1]).sort((p,q)=>dirty(p[1])-dirty(q[1]));for(const [i,x] of cand){const b=(x.eq&&x.eq.g)||String(x.zh||'');if(seen.has(b))continue;seen.add(b);pick.push([i,x]);if(pick.length>=st.max)break;}
   const T=new Map(),add=(k,v,src)=>{if(!T.has(k))T.set(k,[0,0]);T.get(k)[src]+=v;},SKIP=/^(需求等級|價格|重量)$/,txt=[];
   for(const [,x] of pick)for(const l of String(x.desc||'').split('\n'))if(l.includes('｜'))for(const p of l.split('｜').slice(1)){const m=p.trim().match(/^(.+?)\s*(-?[\d.]+)$/);if(m&&!SKIP.test(m[1]))add(m[1],+m[2],0);}
-  for(const [n,fx] of st.tiers)if(n<=pick.length)for(const f of fx){const m=f.match(/^([^+\-0-9（(]+?)\s*([+-])\s*([\d.]+)$/);if(m)add(m[1].trim(),(m[2]==='-'?-1:1)*+m[3],1);else txt.push(f);}
+  for(const [n,fx] of st.tiers)if(n<=pick.length)for(const f of fx){const m=f.match(/^([^+\-0-9（(]+?)\s*([+-])\s*([\d.]+)%?(?:（(.+)）)?$/);if(m&&!/專屬/.test(f)){add(m[1].trim(),(m[2]==='-'?-1:1)*+m[3],1);if(m[4])txt.push(m[4]);}else txt.push(f);}
   return{pick,T,txt};}
 function setTotalHtml(st){const {pick,T,txt}=setTotal(st);if(!pick.length)return'';const R=[...T.entries()];
-  return`<div class="small muted" style="margin:10px 0 4px">著晒成套（${pick.length} 件）嘅總能力（裝備能力 ＋ 套裝效果）</div><div class="tw"><table class="dt"><tr><th>能力</th><th class="r">裝備</th><th class="r">套裝</th><th class="r">合計</th></tr>${R.map(([k,[a,b]])=>`<tr><td>${esc(k)}</td><td class="r">${a?int(a):'–'}</td><td class="r">${b?'+'+int(b):'–'}</td><td class="r"><b>${int(a+b)}</b></td></tr>`).join('')}</table></div>${txt.length?`<div class="small" style="margin-top:6px"><span>另外：</span><span>${txt.map(esc).join("、")}</span></div>`:''}`;}
+  return`<div class="small muted" style="margin:10px 0 4px">著晒成套（${pick.length} 件）嘅總能力（裝備能力 ＋ 套裝效果）</div><div class="tw"><table class="dt"><tr><th>能力</th><th class="r">裝備</th><th class="r">套裝</th><th class="r">合計</th></tr>${R.map(([k,[a,b]])=>{const pc=/抵抗/.test(k)?'%':'';return`<tr><td>${esc(k)}</td><td class="r">${a?int(a)+pc:'–'}</td><td class="r">${b?'+'+int(b)+pc:'–'}</td><td class="r"><b>${int(a+b)}${pc}</b></td></tr>`;}).join('')}</table></div>${txt.length?`<div class="small" style="margin-top:6px"><span>另外：</span><span>${txt.map(esc).join("、")}</span></div>`:''}`;}
 function setCard(st,open,cur){const pcs=st.items.map(i=>[i,get(i)]).filter(x=>x[1]);
   return`<details class="card setc"${open?' open':''}><summary class="phead">${pcs[0]?icon(pcs.find(([,x])=>x.eq&&x.eq.g==='W')?.[1]||pcs[0][1],36):''}<span class="pname">${esc(st.n)}</span><span class="chip">${STT[st.t]||'套裝'}</span><span class="chip">最多 ${st.max} 件</span></summary>
    <div class="tw" style="margin-top:8px"><table class="dt"><tr><th class="r">件數</th><th>效果</th></tr>${st.tiers.map(([n,fx])=>`<tr><td class="r">${n} 件</td><td>${fx.map(esc).join('<br>')}</td></tr>`).join('')}</table></div>
@@ -1715,7 +1715,7 @@ function vSets(){const L=SY().sets||[];const q=(ui.sq||'').trim().toLowerCase();
   const R=L.filter(st=>(ty===''||String(st.t)===ty)&&(!q||(st.n+' '+(st.en||'')).toLowerCase().includes(q)||st.tiers.some(t=>t[1].join(' ').toLowerCase().includes(q))||st.items.some(i=>get(i)&&hay(get(i)).includes(q))));
   return`${crumb([['套裝效果']])}<h1>套裝效果</h1><p class="lead">同一套裝備着夠件數就有額外能力。可以搜套裝名、部件名或者效果（例：智力、傷害增加）。</p>
   ${tabsUI('sty',[['','全部（'+L.length+'）'],['0','一般套裝'],['2','將帥套裝']],ty)}
-  <label class="f">搜尋<input type="search" id="sq" value="${esc(ui.sq||'')}" placeholder="例：朱雀、貂蟬、全屬性值"></label>
+  <label class="f">搜尋<input type="search" id="sq" value="${esc(ui.sq||'')}" placeholder="例：朱雀、貂蟬、法術抵抗"></label>
   <p class="small muted">${R.length} 套</p><div style="display:grid;gap:10px">${R.map(st=>setCard(st,false)).join('')||'<p class="muted">搵唔到。</p>'}</div>`;}
 function vDisp(S,di){const x=(S.disp||[])[di];const F=S.form||[];const tabs=tabsUI('fmi',[...F.map((y,i)=>[String(i),y.n]),...(S.disp||[]).map((y,i)=>['d'+i,y.n])],'d'+di);if(!x)return'';const need=x.need&&get(x.need);const book=x.book&&get(x.book);
   return`${crumb([['陣法']])}<h1>陣法</h1><p class="lead">戰鬥陣型：學咗陣法書之後，傭兵按位置排，全隊有額外能力，用材料可以升級。</p>${tabs}
