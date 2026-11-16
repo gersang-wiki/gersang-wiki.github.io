@@ -760,12 +760,12 @@ let MNC=LS.get('gs-mnocraft',{});
 const buyIt=(id,depth)=>depth>0&&!!MNC[id];
 const realPrice=id=>{if(MPR[id]!==''&&MPR[id]!=null)return N(MPR[id]);const m=mkt(id);return m&&m.src!=='NPC'?N(m.p):0;};
 function craftReal(id,path,depth,self){const r=depth<6&&!path.includes(id)&&(self||!buyIt(id,depth))?recipeFor(id):null;
-  if(!r||!r.m.length){const p=realPrice(id);return p>0?p:NaN;}let c=r.fee||0;for(const [m,q] of r.m)c+=q*craftReal(m,[...path,id],depth+1,false);return c/r.y;}
+  if(!r||!r.m.length){const p=unitPrice(id);return p>0?p:NaN;}let c=r.fee||0;for(const [m,q] of r.m)c+=q*craftReal(m,[...path,id],depth+1,false);return c/r.y;}
 function cmpChips(id,path,depth){const b=realPrice(id),c=craftReal(id,path,depth,true);if(!(b>0)||!isFinite(c))return'';return chip('買 '+int(b)+' 兩／個',b<c?'hot':'')+chip('合 '+int(Math.round(c))+' 兩／個',c<=b?'hot':'');}
 function cmpNote(id,path,depth){const b=realPrice(id),c=craftReal(id,path,depth,true);if(b>0&&isFinite(c))return'';
-  return`<div class="mline small muted">${b>0?`拍賣所 ${int(b)} 兩／個；有啲材料冇拍賣價，唔比較`:'拍賣所冇價錢，唔比較'}</div>`;}
+  return`<div class="mline small muted">${b>0?`拍賣所 ${int(b)} 兩／個；有啲材料冇價錢，唔比較`:'拍賣所冇價錢，唔比較'}</div>`;}
 function priceLine(id,n){const u=unitPrice(id),own=MPR[id]!==''&&MPR[id]!=null,m=mkt(id),bp=basePrice(id);
-  const src=own?'自己填嘅價':m?(m.src==='NPC'?'拍賣所 30 日內冇人賣，用賣 NPC 價':`拍賣所 30 日最低（國際服，${new Date(m.ts).toLocaleDateString('zh-HK')}）`):bp?'冇拍賣紀錄，用遊戲基本價格':'冇價錢，要自己填';
+  const src=own?'自己填嘅價':m?(m.src==='NPC'?'拍賣所 30 日內冇人賣，用賣 NPC 價（機會成本）':`拍賣所 30 日最低（國際服，${new Date(m.ts).toLocaleDateString('zh-HK')}）`):bp?'冇拍賣紀錄，用賣 NPC 價（機會成本）':'冇價錢，要自己填';
   return`<div class="mline small muted"><input type="number" min="0" step="any" data-mpr="${esc(id)}" data-q="${n}" value="${own?esc(MPR[id]):''}" placeholder="${m?fmt(N(m.p)):bp?fmt(bp):'自己填'}" aria-label="單價"> <span class="nw">× ${fmt(n)} ＝ <b data-msub>${u?int(u*n):'–'}</b> 兩</span><div>${esc(src)}</div></div>`;}
 function expand(id,n,depth,acc,path){const r0=depth<6&&!path.includes(id)?recipeFor(id):null;const can=!!(r0&&r0.m.length);
   if(can&&buyIt(id,depth)){acc.raw[id]=(acc.raw[id]||0)+n;acc.sum+=unitPrice(id)*n;return`<li>${row(id,chip('×'+fmt(n),'cond')+chip('直接買')+cmpChips(id,path,depth))}${priceLine(id,n)}<div class="bar" style="margin:2px 0 6px"><button type="button" class="btn" data-mnc="${esc(id)}">改返自己合</button></div></li>`;}
@@ -780,7 +780,7 @@ function vMats(){const id=ui.mid,n=Math.max(1,N(ui.mn)||1);let out='';
   if(id&&get(id)){const acc={raw:{},fee:0,sum:0,tools:new Set()};const tree=expand(id,n,0,acc,[]);
     const raw=Object.entries(acc.raw).sort((a,b)=>b[1]-a[1]);const total=acc.sum+acc.fee;const miss=raw.filter(([k])=>!unitPrice(k)).length;
     const pb=realPrice(id)*n;
-    out=section('材料同成本',`<p class="small muted" style="margin:0 0 8px">每件中間材料都可以揀「自己合」定「直接買」。每樣材料下面係單價同小計，可以改做自己嘅價（會記住喺呢部機）。「買」同「合」只會用拍賣所價錢（或者你填嘅價）比較，平啲嗰個會亮起；冇拍賣價錢就唔比較。</p>
+    out=section('材料同成本',`<p class="small muted" style="margin:0 0 8px">每件中間材料都可以揀「自己合」定「直接買」。每樣材料下面係單價同小計，可以改做自己嘅價（會記住喺呢部機）。冇拍賣價錢嘅材料用賣 NPC 價計（即係唔賣俾 NPC 嘅機會成本）。中間材料要有拍賣所價錢（或者你填嘅價）先會比較「買」同「合」，平啲嗰個會亮起。</p>
       <div class="bar" style="margin:0 0 8px"><button type="button" class="btn pri" data-mauto="1">自動揀平嘅做法</button>${Object.keys(MNC).length?'<button type="button" class="btn" data-mncclr="1">全部改返自己合</button>':''}${Object.keys(MPR).length?'<button type="button" class="btn" data-mprclr="1">清除自己填嘅單價</button>':''}</div>
       <div class="mcalc" data-fee="${acc.fee}"><div class="mtree"><ul>${tree}</ul></div>
       <div class="mtot">${acc.fee?`<div class="bar between"><span>專業技能手續費</span><span>${int(acc.fee)} 兩</span></div>`:''}<div class="bar between"><b>總成本</b><b><span id="m-total">${int(total)}</span> 兩</b></div>
