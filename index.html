@@ -315,7 +315,7 @@ const svChips=e=>(e.sv||[]).map(s=>chip(SV[s]||s)).join('');
 function row(id,side,subExtra){const e=get(id);if(!e)return`<div class="row"><span class="nm muted">（已刪除嘅資料）</span></div>`;
   const a=alt(e);const sub=[a,subExtra].filter(Boolean).join(' ｜ ');const t=typeOf(id);
   return`<a class="row" href="#${esc(id)}">${icon(e,icoPx(t,e),t==='mercs'||t==='monsters'?'face':null)}<span class="nm">${esc(nm(e))}${sub?`<span class="sub">${esc(sub)}</span>`:''}</span><span class="side">${side||''}</span></a>`;}
-const placeNames=ids=>(ids||[]).map(p=>nm(get(p))).join('、');
+const placeNames=ids=>[...new Set((ids||[]).map(p=>nm(get(p))))].join('、');
 function srcHtml(e){if(!e.src)return'';const s=SRC[e.src];
   if(s&&s.url)return`<p class="small muted" style="margin:0">資料來源：<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title||s.url)}</a></p>`;
   if(s&&s.title)return`<p class="small muted" style="margin:0">資料來源：${esc(s.title)}</p>`;
@@ -482,7 +482,7 @@ function vList(t){
   if(t==='quests'&&ui.qv==='train')return`${crumb([['任務','quests'],['巨商修練書']])}<h1>任務</h1>${qtab}${vTrain()}`;
   if(t==='quests'&&ui.qv!=='all')return`${crumb([['任務']])}<h1>任務</h1>${qtab}${statusBox()}${vQuestLines()}`;
   return`${crumb([[TYPES[t].l]])}<div class="bar between"><h1>${TYPES[t].l}<span class="alt">　${all.length.toLocaleString('en-US')} 筆</span></h1>${!TYPES[t].ro&&canWrite!==false&&db?`<a class="btn" href="#new-${t}">＋ 新增</a>`:''}</div>${qtab||''}
-  ${stab}${fb||sortUi?`<details class="fx" ${(ui.fopen==null?innerWidth>=980:ui.fopen)?'open':''} id="fxbox"><summary>篩選${nf?`（已揀 ${nf} 項）`:''}${q?`，關鍵字「${esc($('#q').value.trim())}」`:''}</summary><div class="fxin">${fb}${sortUi}</div></details>`:''}
+  ${stab}${fb?`<details class="fx" ${(ui.fopen==null?innerWidth>=980:ui.fopen)?'open':''} id="fxbox"><summary>篩選${nf?`（已揀 ${nf} 項）`:''}${q?`，關鍵字「${esc($('#q').value.trim())}」`:''}</summary><div class="fxin">${fb}</div></details>`:''}${sortUi?`<div class="bar" style="margin:0 0 10px">${sortUi}</div>`:''}
   ${statusBox()}${hidN?`<p class="small muted">已收起 ${hidN} 個重複嘅「商團資訊」同「出口」NPC，喺篩選揀功能就睇得返。</p>`:''}
   <section class="card">${rows(all.slice(0,lim).map(([id,e])=>row(id,sideFor(t,e),subFor(t,e))))||'<p class="muted" style="margin:0">冇符合嘅資料。</p>'}
   ${all.length>lim?`<div class="more"><button type="button" class="btn" data-more="${t}">再顯示 100 筆（仲有 ${(all.length-lim).toLocaleString('en-US')} 筆）</button></div>`:''}</section>`;}
