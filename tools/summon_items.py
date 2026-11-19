@@ -14,3 +14,13 @@ for l in open(G + '/Online/Item/CreatureItem.txt', 'rb').read().decode('cp949').
             M[m]['summon'] = it; n += 1
 json.dump(D, open(P, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
 print('summon', n)
+# 神仙谷 張果老 certificates for element / 咒術師 monsters (fees from the item notes)
+D = json.load(open(P, encoding='utf-8')); M = D['mercs']; I = D['items']
+X = {'guH44': ('gi6411', 5000000), 'guH45': ('gi6412', 5000000), 'guH46': ('gi6413', 5000000),
+     'guH47': ('gi6414', 5000000), 'guF40': ('gi6967', 5000000), 'guF41': ('gi7587', 200000000),
+     'guF42': ('gi7588', 200000000)}
+for m, (it, fee) in X.items():
+    if m in M and it in I and not M[m].get('from'):
+        M[m]['summon'] = it; I[it]['cfee'] = fee
+json.dump(D, open(P, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
+print('cert summon', len(X))

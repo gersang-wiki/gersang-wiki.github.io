@@ -696,7 +696,7 @@ function mercDetail(id,e){let b='';const s=e.st||{};
   else   b+=section(e.desc?'介紹':'',e.desc?`<p class="pre" style="margin:0">${esc(e.desc[lang==='en'?'en':'zh']||e.desc.zh||e.desc.en||'')}</p>`:'');
   b+=section('基本能力',statDl([['力量',s.str],['敏捷',s.dex],['體力',s.vit],['智力',s.int],['合計',e.base],['生命',s.hp],['魔力',s.mp],['防禦',s.ac],['打擊抵抗',s.pr?s.pr+'%':''],['法術抵抗',s.mr?s.mr+'%':''],['攻擊力',s.atk&&s.atk[1]?s.atk.join('–'):''],['移動速度',s.spd],['負重',s.lift]])
     +(s.fr>1||s.ir>1||s.tr>1||s.wr>1?`<p class="small muted" style="margin:8px 0 0">屬性抵抗：火 ${s.fr}　冰 ${s.ir}　雷 ${s.tr}　風 ${s.wr}</p>`:'')
-    +(s.cost?`<p class="small muted" style="margin:8px 0 0">${(e.from||[]).length?'轉職費用':'僱用費用'} ${int(s.cost)} 兩${e.cat==='怪物'&&!(e.from||[]).length?'（另外要封印珠 1 個）':''}${s.credit?`，信用等級 ${s.credit}`:''}</p>`:''));
+    +(s.cost?`<p class="small muted" style="margin:8px 0 0">${(e.from||[]).length?'轉職費用':'僱用費用'} ${int(s.cost)} 兩${e.cat==='怪物'&&!(e.from||[]).length&&N(e.seal)>0?`（另外要封印珠 ${e.seal} 個）`:''}${s.credit?`，信用等級 ${s.credit}`:''}</p>`:''));
   b+=section('技能',rows((e.sk||[]).map(k=>{const x=get(k);return row(k,((e.wsk||[]).includes(k)?chip('專用武器技能'):'')+(x&&x.f?chip('可計傷害','hot'):''),[x&&x.cost?`魔力 ${x.cost}`:'',TXT(x&&(x.mdesc||x.desc))].filter(Boolean).join('｜'));})));
   if((e.tr||[]).length)b+=section('特性',`<div class="rows">${e.tr.map(t=>{const lines=(t.ex||[]).map((x,j)=>{const v=t.st[j]||t.st[0]||[];const r=v.length?(v[0]===v[v.length-1]?fmt(v[0]):fmt(v[0])+'～'+fmt(v[v.length-1])):'';return esc(TXT(x).replace(/%%/g,'%').replace(/%[gd]/,r).replace(/\\n|\n/g,'').trim());}).join('');
     const mx=Math.max(0,...t.st.map(v=>v.length));
@@ -1234,8 +1234,8 @@ function statueItems(mid,lvs){const r=ruleOf(mid),X=statIdx(),out=[];const n=r.n
     for(const t of T){if(used.has(t.mon))continue;const lv=want||Math.min(...Object.keys(t.L).map(Number));const id=t.L[lv];if(!id)continue;const c=synUnit(id);const cc=c>0?c:1e18;if(!best||cc<bp){bp=cc;best={t,id};}}
     if(best){used.add(best.t.mon);out.push([best.id,1]);}}
   const rt=X.root[mid];if(rt)out.push([rt,10]);if(get(SEAL))out.push([SEAL,n]);return out;}
-const hireOf=mid=>N(get(mid)&&get(mid).st&&get(mid).st.cost);const HIRE_SEAL=1;
-const hireItems=mid=>{const e=get(mid);return e&&e.cat==='怪物'&&!(e.from||[]).length&&get('gi853')?[['gi853',HIRE_SEAL]]:[];};
+const hireOf=mid=>N(get(mid)&&get(mid).st&&get(mid).st.cost);
+const hireItems=mid=>{const e=get(mid);return e&&e.cat==='怪物'&&!(e.from||[]).length&&N(e.seal)>0&&get('gi853')?[['gi853',N(e.seal)]]:[];};
 const itemsCost=L=>L.reduce((a,[i,q])=>a+synUnit(i)*q,0);
 function routeItems(mid,depth){depth=depth||0;if(ROUTE[mid])return ROUTE[mid];ROUTE[mid]={m:[],f:0};if(depth>9)return ROUTE[mid];const r=ruleOf(mid);let out=[],f=hireOf(mid);
   const sub=en=>{const R=routeItems(en.id,depth+1);return{m:[...(en.items||[]),...R.m],f:R.f};};const cost=x=>itemsCost(x.m)+x.f;
