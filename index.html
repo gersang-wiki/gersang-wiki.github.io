@@ -1268,8 +1268,8 @@ function runOpt(mode){if(!BT)return;const msg=$('#o-bopt');
 
 /* damage */
 const BEATS={火:'風',風:'雷',雷:'水',水:'火'};
-function relOf(a,b){if(!b||!a)return'none';if(a==='土'&&b!=='土')return'win';if(b==='土'&&a!=='土')return'lose';if(BEATS[a]===b)return'win';if(BEATS[b]===a)return'lose';return'even';}
-const RELN={win:'剋屬',lose:'被剋屬',even:'互不剋屬',none:'無屬性影響'};
+function relOf(a,b){if(a==='土'&&b&&b!=='土')return'earthA';if(b==='土'&&a&&a!=='土')return'earthD';if(!b||!a)return'none';if(BEATS[a]===b)return'win';if(BEATS[b]===a)return'lose';return'even';}
+const RELN={win:'剋屬',lose:'被剋屬',even:'互不剋屬',none:'無關屬性',earthA:'土打其他屬性 +5%',earthD:'打土屬性 −30%'};
 const SLOTS=[['W','武器','W'],['H','頭盔','H'],['A','盔甲／服裝','AC'],['G','手套','G'],['B','腰帶','B'],['S','鞋子','S'],['R1','戒指','R'],['R2','戒指','R'],['Y','寶珠','Y'],['J','手環','J'],['V','綁腿','V'],['N','項鍊','N'],['P','耳環','P'],['Q','外型裝備','Q'],['X','氣息','X']];
 const codeOf=id=>String(id||'').slice(2);
 function canUse(it,code){const o=it&&it.eq&&it.eq.only;return!o||o===code||((X.grp||{})[o]||[]).includes(code);}
@@ -1373,7 +1373,7 @@ function vDamage(){const d=C.d;d.eq=d.eq||{};d.tr=d.tr||{};d.tm=d.tm||[];d.tt=d.
   ${own.length?`<div class="small muted">${esc(nm(who))} 自己嘅特性</div>${own.map(x=>trRow(x,d.tr)).join('')}`:''}
   <div class="grid2">${ci('d','atkp','攻擊力 ＋')}${ci('d','dmgp','傷害 ＋%')}${sel('mel','我方屬性',elo)}${ci('d','mav','屬性值 ＋（裝備以外）')}${ci('d','ext','追加傷害 %')}</div></section>
  <section class="card" aria-live="polite"><h2>結果</h2><div id="o-d" class="out"></div></section>
- <p class="small muted" style="margin:0">技能公式由遊戲檔讀出。攻擊力 ＝ 角色基本攻擊 ＋ 武器攻擊 ＋ 等級 × 0.6 ＋ 總力量 × 0.4 ＋ 裝備攻擊力（遊戲檔 Character List 寫明嘅公式）。抗性減傷 ＝ ×（215 − 有效抵抗 × 0.8）÷ 500，有效抵抗 0–260。扣抗武器公式（遊戲檔 SkillDamgeFormula）：黑蓮系列 ＝ 1 ＋ 等級 ÷ 4.1，其他 ＝ 1 ＋ 等級 ÷ 5。抗性 0 都只計 43% 傷害，係遊戲本身嘅設計。屬性：火剋風、風剋雷、雷剋水、水剋火、土剋全。</p>`;}
+ <p class="small muted" style="margin:0">技能公式由遊戲檔讀出。攻擊力 ＝ 角色基本攻擊 ＋ 武器攻擊 ＋ 等級 × 0.6 ＋ 總力量 × 0.4 ＋ 裝備攻擊力（遊戲檔 Character List 寫明嘅公式）。抗性減傷 ＝ ×（215 − 有效抵抗 × 0.8）÷ 500，有效抵抗 0–260。扣抗武器公式（遊戲檔 SkillDamgeFormula）：黑蓮系列 ＝ 1 ＋ 等級 ÷ 4.1，其他 ＝ 1 ＋ 等級 ÷ 5。抗性 0 都只計 43% 傷害，係遊戲本身嘅設計。屬性：火剋風、風剋雷、雷剋水、水剋火；剋屬：屬性值 ≥ 對手就 ＋我方屬性值%，低過對手就 ＋我方 −（差距 ÷ 2）%；被剋：−對手屬性值%；互不剋或者無屬性：低過對手就 −差距 × 1.5%；土打其他屬性 ＋5%，其他屬性打土 −30%。</p>`;}
 function calcDamage(){const d=C.d;const o=$('#o-d');if(!o)return;const R=dStats();const S=d.sk&&get(d.sk);
   const ds=$('#d-stat');if(ds)ds.innerHTML=`<table class="bd"><tr><td>力量／敏捷／體力／智力</td><td>${int(R.S.str)}／${int(R.S.dex)}／${int(R.S.vit)}／${int(R.S.int)}</td></tr><tr><td>攻擊力</td><td>${fmt(R.mn)}–${fmt(R.mx)}</td></tr>${R.E.ea?`<tr><td>屬性值</td><td>${R.E.ea} <span class="small muted">（兵本身 ${R.E.base||0}${R.E.ea-(R.E.base||0)-(R.E.sea||0)?` ＋ 裝備 ${R.E.ea-(R.E.base||0)-(R.E.sea||0)}`:''}${R.E.sea?` ＋ 套裝 ${R.E.sea}`:''}）</span></td></tr>`:''}${R.E.sets&&R.E.sets.length?`<tr><td>套裝效果</td><td>${esc(R.E.sets.join('、'))} <span class="small muted">（已計入總能力）</span></td></tr>`:''}</table>`;
   const lf=$('#d-left');if(lf)lf.textContent='剩 '+(R.pts-R.used);
@@ -1397,7 +1397,7 @@ function calcDamage(){const d=C.d;const o=$('#o-d');if(!o)return;const R=dStats(
   (d.wd||[]).forEach(([id,lv])=>{const it=get(id);if(!it||!it.eq||it.eq.rd!==dt)return;redW+=N(lv)/(it.eq.rd2?4.1:5)+1;});
   const red=redT+redW+N(d.red);const eff=Math.max(0,Math.min(260,res-red));const rp=(215-eff*0.8)/5;
   const me=d.mel||R.el,en=d.eel||(mon&&mon.el)||'';const r=relOf(me,en);const m_=R.E.ea+N(d.mav)+mavA,e_=Math.max(0,(d.eav!==''&&d.eav!=null?N(d.eav):mon?N(mon.av):0)-eavR);
-  let ap=100;if(r==='win')ap=m_>=e_?100+m_:100+1.5*m_-0.5*e_;else if(r==='lose')ap=100-e_;ap=Math.max(10,ap);
+  let ap=100;if(r==='win')ap=m_>=e_?100+m_:100+1.5*m_-0.5*e_;else if(r==='lose')ap=100-e_;else if(r==='earthA')ap=105;else if(r==='earthD')ap=70;else ap=m_>=e_?100:100-1.5*(e_-m_);ap=Math.max(10,ap);
   const hits=Math.max(1,N(d.hits)||1);const mul=(1+pct/100)*rp/100*ap/100*(1+N(d.ext)/100)*xmul;
   const lo=Math.max(1,F(R.mn+atkx)*mul),hi=Math.max(1,F(R.mx+atkx)*mul);
   const split=d.hm==='split';const tlo=split?lo:lo*hits,thi=split?hi:hi*hits;const plo=split?lo/hits:lo,phi=split?hi/hits:hi;
