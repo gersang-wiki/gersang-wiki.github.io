@@ -277,7 +277,7 @@ const MCAT=['主角','傭兵','1次將帥','2次將帥','改造將帥','覺醒�
 const FAC={monsters:[['nat','地區'],['zone','地圖區域','nat'],['el','屬性'],['mlv','定類魔法等級'],['grade','階級'],['move','類型']],
   mercs:[['cat','類別'],['job','轉職','cat'],['nat','國家']],skills:[['who','類別'],['ucat','兵種類別'],['calc','傷害公式']],
   items:[['cat','分類'],['sub','細分類','cat']],places:[['region','類型']],combos:[],quests:[['qt','類型'],['lvb','等級']],npcs:[['fn','功能'],['nat','國家']]};
-const SORTS={monsters:[['nm','名稱'],['exp','經驗值'],['hp','生命']],mercs:[['nm','名稱'],['base','基本能力']],skills:[['nm','名稱'],['cost','魔力消耗']],quests:[['lv','等級（低至高）',1],['nm','名稱']]};
+const SORTS={monsters:[['nm','名稱'],['exp','經驗值'],['hp','生命'],['ev','掉落期望價值']],mercs:[['nm','名稱'],['base','基本能力']],skills:[['nm','名稱'],['cost','魔力消耗']],quests:[['lv','等級（低至高）',1],['nm','名稱']]};
 const D={},BASE={},DBD={},SC={};TK.forEach(k=>{D[k]=new Map();BASE[k]={};DBD[k]=[];});
 let baseSrc={},dbSrc={},baseOk=false,ATL={},X={};
 const IMGV='20261114d';let SRC={},lang='zh',db=null,user=null,canWrite=null,load='loading',got={},filt={},sortBy={},shown={},draft=null,busy=false,ui={};
@@ -350,6 +350,8 @@ function itemInfo(e){const L=(e.desc||'').split('\n');const txt=[],get_=[],kv=[]
 const qty=(arr)=>(arr||[]).map(d=>`${nm(get(d.i||d[0]))}×${d.q||d[1]}`).join('、');
 
 /* ---------- reverse lookups ---------- */
+function dropVal(id){if(MPR[id]!==''&&MPR[id]!=null)return{u:N(MPR[id]),k:'own'};const m=mkt(id);if(m)return{u:N(m.p),k:'A'};const b=sellPrice(id);return b>0?{u:b,k:'N'}:{u:0,k:''};}
+function monEV(e){let v=0;const L=[];for(const d of e.drops||[]){const p=parseFloat(d.p)/100;if(!(p>0))continue;const x=dropVal(d.i),ev=p*x.u;v+=ev;L.push({i:d.i,p,u:x.u,k:x.k,ev});}return{v,L};}
 const droppedBy=i=>sorted('monsters').filter(([,m])=>(m.drops||[]).some(d=>d.i===i));
 const usedInItems=i=>sorted('items').filter(([,x])=>(x.recipe||[]).some(d=>d.i===i));
 const questsNeed=i=>sorted('quests').filter(([,x])=>(x.need||[]).some(d=>d.i===i));
@@ -426,7 +428,7 @@ const MLN=['初級','初級','一般','中級','高級','最高級','最高級',
 function mLv(e){if(!e)return null;if(e.mt!=null)return[e.mt,MLN[Math.min(e.mt,11)]];const h=+e.hp;if(!h)return null;const r=MLV.find(x=>h<=x[2]);return[r[0],r[1],1];}
 const mLvTxt=e=>{const v=mLv(e);return v?`${v[0]} 級`+(v[1]?`・${v[1]}`:''):'';};
 function sideFor(t,e){
-  if(t==='monsters')return elChip(e.el)+chip(mLv(e)?mLv(e)[0]+' 級':'')+chip(e.grade);
+  if(t==='monsters')return elChip(e.el)+chip(mLv(e)?mLv(e)[0]+' 級':'')+chip(e.grade)+(sortBy.monsters==='ev'&&(e.drops||[]).length?chip('每隻 '+int(Math.round(monEV(e).v))+' 兩','hot'):'');
   if(t==='mercs')return chip(e.cat)+chip(e.job)+chip(e.nat);
   if(t==='skills')return e.f?chip('有公式','hot'):'';
   if(t==='items')return chip(e.sub||e.cat);
@@ -463,7 +465,8 @@ function vList(t){
   for(const [k] of FAC[t].concat([['sv']]))if(f[k])all=all.filter(([,e])=>facVal(t,e,k).includes(f[k]));
   let hidN=0;if(t==='npcs'&&!f.fn&&!q){const b=all.length;all=all.filter(([,e])=>!(e.fn||[]).some(x=>x==='商團資訊'||x==='出口'));hidN=b-all.length;}
   const so=sortBy[t]||(SORTS[t]?SORTS[t][0][0]:'nm');const asc=SORTS[t]&&(SORTS[t].find(x=>x[0]===so)||[])[2];
-  if(so!=='nm')all=[...all].sort((a,b)=>asc?N(a[1][so]||9999)-N(b[1][so]||9999):N(b[1][so])-N(a[1][so]));
+  if(so==='ev'){const V=new Map(all.map(([k,e])=>[k,monEV(e).v]));all=[...all].sort((a,b)=>V.get(b[0])-V.get(a[0]));}
+  else if(so!=='nm')all=[...all].sort((a,b)=>asc?N(a[1][so]||9999)-N(b[1][so]||9999):N(b[1][so])-N(a[1][so]));
   const lim=shown[t]||100;
   const sortUi=SORTS[t]?`<label class="f" style="max-width:180px">排序<select id="sortsel">${SORTS[t].map(s=>`<option value="${s[0]}" ${so===s[0]?'selected':''}>${s[1]}</option>`).join('')}</select></label>`:'';
   const nf=Object.values(f).filter(Boolean).length;
@@ -508,7 +511,12 @@ function vDetail(id,t,e){
     if((e.aby||[]).length)b+=section('深淵能力',`<div class="tw"><table class="dt"><tr><th>等級</th><th>難度</th><th class="r">生命</th><th class="r">打抗</th><th class="r">法抗</th><th class="r">屬性值</th></tr>${e.aby.map(a=>`<tr><td>${a[0]}</td><td>${MODE[a[1]]||esc(a[1])}</td><td class="r">${int(a[2])}</td><td class="r">${a[3]}%</td><td class="r">${a[4]}%</td><td class="r">${a[5]}</td></tr>`).join('')}</table></div><p class="small muted" style="margin:6px 0 0"><a href="#abyss">睇深淵 ›</a></p>`);
     b+=section('出沒地點',rows((e.at||[]).map(p=>{const pl=get(p);return row(p,'',pl&&pl.entry?pl.entry:'');})));
     if((e.atn||[]).length)b+=section('出現條件',`<ul class="small" style="margin:0;padding-left:18px">${e.atn.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>${e.hb?'':`<p class="small muted" style="margin:6px 0 0">遊戲怪物圖鑑寫嘅出現方法（例如打低某隻頭目之後變身出現）。</p>`}`);
-    b+=section(`掉落道具（${(e.drops||[]).length}）`,rows((e.drops||[]).map(d=>row(d.i,(d.p?chip(d.p,'hot'):'')+(d.c?chip(d.c,'cond'):''))))+((e.drops||[]).some(d=>d.p)?'<p class="small muted" style="margin:6px 0 0">掉落機率由遊戲檔讀出（遊戲以十萬分之幾記錄）。</p>':''));
+    {const EV=monEV(e),EM=new Map(EV.L.map(x=>[x.i,x]));
+    if(EV.L.length){const top=[...EV.L].sort((a,b)=>b.ev-a.ev).slice(0,3).filter(x=>x.ev/EV.v>=0.01);const ex=N(e.exp);
+      b+=section('掉落期望價值',`<div class="big">${int(Math.round(EV.v))} 兩</div><div class="small muted">平均每打一隻</div>
+      <table class="bd" style="margin-top:8px"><tr><td>每 1,000 隻</td><td>${int(Math.round(EV.v*1000))} 兩</td></tr>${ex?`<tr><td>每 1 點經驗</td><td>${(Math.round(EV.v/ex*100)/100).toLocaleString('en-US')} 兩</td></tr>`:''}${top.length?`<tr><td>主要來源</td><td>${top.map(x=>`${esc(nm(get(x.i)))} ${Math.round(x.ev/EV.v*100)}%`).join(lang==='zh'?'、':', ')}</td></tr>`:''}</table>
+      <p class="small muted" style="margin:6px 0 0">期望價值 ＝ 每樣掉落物嘅掉落率 × 單價，再加埋。單價用國際服拍賣所 30 日最低價；拍賣所冇價嘅用賣 NPC 價。你喺材料計算自己填過嘅單價會優先用。冇寫掉落率嘅道具唔計。</p>`);}
+    b+=section(`掉落道具（${(e.drops||[]).length}）`,rows((e.drops||[]).map(d=>{const x=EM.get(d.i);return row(d.i,(d.p?chip(d.p,'hot'):'')+(d.c?chip(d.c,'cond'):'')+(x&&x.u?chip('每隻 '+(x.ev>=1?int(Math.round(x.ev)):(Math.round(x.ev*100)/100).toLocaleString('en-US'))+' 兩'+(x.k==='N'?'（NPC 價）':'')):''));}))+((e.drops||[]).some(d=>d.p)?'<p class="small muted" style="margin:6px 0 0">掉落機率由遊戲檔讀出（遊戲以十萬分之幾記錄）。</p>':''));}
     {const LC=sorted('combos').filter(([,c])=>c.lead===id),OC=sorted('combos').filter(([,c])=>c.lead!==id&&(c.mons||[]).some(m=>m.i===id));
      const addB=db&&canWrite!==false?`<div class="bar"><a class="btn" href="#new-combos" data-combolead="${esc(id)}">＋ 新增以呢隻做主怪物嘅組合</a></div>`:'';
      b+=section(`做主怪物嘅戰鬥組合（${LC.length}）`,(LC.length?LC.map(([x,c])=>comboCard(x,c,id)).join(''):'<p class="small muted" style="margin:0">未有人記錄。</p>')+addB);
@@ -688,7 +696,7 @@ function mercDetail(id,e){let b='';const s=e.st||{};
   else   b+=section(e.desc?'介紹':'',e.desc?`<p class="pre" style="margin:0">${esc(e.desc[lang==='en'?'en':'zh']||e.desc.zh||e.desc.en||'')}</p>`:'');
   b+=section('基本能力',statDl([['力量',s.str],['敏捷',s.dex],['體力',s.vit],['智力',s.int],['合計',e.base],['生命',s.hp],['魔力',s.mp],['防禦',s.ac],['打擊抵抗',s.pr?s.pr+'%':''],['法術抵抗',s.mr?s.mr+'%':''],['攻擊力',s.atk&&s.atk[1]?s.atk.join('–'):''],['移動速度',s.spd],['負重',s.lift]])
     +(s.fr>1||s.ir>1||s.tr>1||s.wr>1?`<p class="small muted" style="margin:8px 0 0">屬性抵抗：火 ${s.fr}　冰 ${s.ir}　雷 ${s.tr}　風 ${s.wr}</p>`:'')
-    +(s.cost?`<p class="small muted" style="margin:8px 0 0">${(e.from||[]).length?'轉職費用':'僱用費用'} ${int(s.cost)} 兩${s.credit?`，信用等級 ${s.credit}`:''}</p>`:''));
+    +(s.cost?`<p class="small muted" style="margin:8px 0 0">${(e.from||[]).length?'轉職費用':'僱用費用'} ${int(s.cost)} 兩${e.cat==='怪物'&&!(e.from||[]).length?'（另外要封印珠 1 個）':''}${s.credit?`，信用等級 ${s.credit}`:''}</p>`:''));
   b+=section('技能',rows((e.sk||[]).map(k=>{const x=get(k);return row(k,((e.wsk||[]).includes(k)?chip('專用武器技能'):'')+(x&&x.f?chip('可計傷害','hot'):''),[x&&x.cost?`魔力 ${x.cost}`:'',TXT(x&&(x.mdesc||x.desc))].filter(Boolean).join('｜'));})));
   if((e.tr||[]).length)b+=section('特性',`<div class="rows">${e.tr.map(t=>{const lines=(t.ex||[]).map((x,j)=>{const v=t.st[j]||t.st[0]||[];const r=v.length?(v[0]===v[v.length-1]?fmt(v[0]):fmt(v[0])+'～'+fmt(v[v.length-1])):'';return esc(TXT(x).replace(/%%/g,'%').replace(/%[gd]/,r).replace(/\\n|\n/g,'').trim());}).join('');
     const mx=Math.max(0,...t.st.map(v=>v.length));
@@ -1214,7 +1222,7 @@ let CERTM=null;function certOf(mid){if(!CERTM){CERTM={};const mz={};[...D.mercs.
    [...D.items.entries()].forEach(([k,e])=>{const z=String(e&&e.zh||'');if(!z.includes('證書')||/不可交易|\d+日|測試|活動/.test(z))return;const m=z.match(/證書\s*[(（](.+?)[)）]\s*$/)||z.match(/證書\s*-\s*(.+)$/);if(!m)return;let u=m[1].trim(),id=mz[u];
     if(!id){const pe=Object.keys(EL).find(x=>z.startsWith(x));if(pe)id=mz[`${u}(${EL[pe]})`];}if(!id)id=(Object.keys(mz).find(n=>n.startsWith(u+'('))||'')&&mz[Object.keys(mz).find(n=>n.startsWith(u+'('))];if(id)(CERTM[id]=CERTM[id]||[]).push(k);});}
   const L=CERTM[mid]||[];let best=null;for(const k of L){const p=realPrice(k);if(p>0&&(!best||p<best.p))best={id:k,p};}return best||(L.length?{id:L[0],p:0}:null);}
-function synEnts(n){const r=n.r;if(r.t==='base'&&n.e&&n.e.summon&&get(n.e.summon))return[{items:[[n.e.summon,1]]}];if(r.t==='job')return[r.alts[n.ai]];if(r.t==='statue')return[{items:statueItems(n.id,Array.from({length:r.n||3},(_,j)=>((stOf(n.p).s||[])[j])||100))}];return r.kids||[];}
+function synEnts(n){const r=n.r;if(r.t==='base'&&n.e&&n.e.summon&&get(n.e.summon))return[{items:[[n.e.summon,1]]}];if(r.t==='base'){const h=hireItems(n.id);if(h.length)return[{items:h}];}if(r.t==='job')return[r.alts[n.ai]];if(r.t==='statue')return[{items:statueItems(n.id,Array.from({length:r.n||3},(_,j)=>((stOf(n.p).s||[])[j])||100))}];return r.kids||[];}
 let STATM=null;function statIdx(){if(STATM)return STATM;STATM={it:{},root:{},types:{幻獸:[],神獸:[]}};
   (SY().statue||[]).forEach(x=>{const m=x.mon&&get(x.mon);if(!m)return;const L={};(x.l||[]).forEach(([lv,id])=>{const e=get(id);if(!e||/不可交易/.test(e.zh||''))return;if(!lv){STATM.root[x.mon]=STATM.root[x.mon]||id;return;}L[lv]=id;STATM.it[id]={mon:x.mon,lv};});
     if(Object.keys(L).length&&STATM.types[m.cat])STATM.types[m.cat].push({mon:x.mon,L});});return STATM;}
@@ -1226,11 +1234,13 @@ function statueItems(mid,lvs){const r=ruleOf(mid),X=statIdx(),out=[];const n=r.n
     for(const t of T){if(used.has(t.mon))continue;const lv=want||Math.min(...Object.keys(t.L).map(Number));const id=t.L[lv];if(!id)continue;const c=synUnit(id);const cc=c>0?c:1e18;if(!best||cc<bp){bp=cc;best={t,id};}}
     if(best){used.add(best.t.mon);out.push([best.id,1]);}}
   const rt=X.root[mid];if(rt)out.push([rt,10]);if(get(SEAL))out.push([SEAL,n]);return out;}
-const hireOf=mid=>N(get(mid)&&get(mid).st&&get(mid).st.cost);
+const hireOf=mid=>N(get(mid)&&get(mid).st&&get(mid).st.cost);const HIRE_SEAL=1;
+const hireItems=mid=>{const e=get(mid);return e&&e.cat==='怪物'&&!(e.from||[]).length&&get('gi853')?[['gi853',HIRE_SEAL]]:[];};
 const itemsCost=L=>L.reduce((a,[i,q])=>a+synUnit(i)*q,0);
 function routeItems(mid,depth){depth=depth||0;if(ROUTE[mid])return ROUTE[mid];ROUTE[mid]={m:[],f:0};if(depth>9)return ROUTE[mid];const r=ruleOf(mid);let out=[],f=hireOf(mid);
   const sub=en=>{const R=routeItems(en.id,depth+1);return{m:[...(en.items||[]),...R.m],f:R.f};};const cost=x=>itemsCost(x.m)+x.f;
   const sm=get(mid)&&get(mid).summon;if(r.t==='base'&&sm&&get(sm))out=[[sm,1]];
+  else if(r.t==='base')out=hireItems(mid);
   else if(r.t==='statue')out=statueItems(mid,null);
   else if(r.t==='job'){let best=null,bc=Infinity;for(const a of r.alts){const x=sub(a),c=cost(x);if(c<bc){bc=c;best=x;}}if(best){out=best.m;f+=best.f;}}
   else if(r.kids)r.kids.forEach(k=>{const x=sub(k);out.push(...x.m);f+=x.f;});
