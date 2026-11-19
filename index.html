@@ -697,7 +697,7 @@ function mercDetail(id,e){let b='';const s=e.st||{};
     +(fr.some(x=>x.items)?`<p class="small muted" style="margin:10px 0 4px">另外需要道具</p>`+rows(fr.flatMap(x=>(x.items||[]).map(it=>row(it[0],chip('×'+it[1],'cond'))))):''));
   const r=rootOf(id);
   if(get(r)&&(get(r).to||[]).length)b+=section('完整轉職路線',`<div class="tree"><ul>${treeHtml(r,id)}</ul></div>`);
-  b+=`<div class="bar"><a class="btn" href="#bonus" data-bonusof="${esc(id)}">計呢個角色嘅紅利</a>${(e.sk||[]).some(k=>get(k)&&get(k).f)?`<a class="btn" href="#damage" data-dmgof="${esc(id)}">用佢嘅技能計傷害</a>`:''}</div>`;
+  b+=`<div class="bar"><a class="btn" href="#bonus" data-bonusof="${esc(id)}">計呢個角色嘅紅利</a>${fr.length?`<a class="btn" href="#bonus" data-bonusof="${esc(id)}" data-bsyn="1">計合成成本</a>`:''}${(e.sk||[]).some(k=>get(k)&&get(k).f)?`<a class="btn" href="#damage" data-dmgof="${esc(id)}">用佢嘅技能計傷害</a>`:''}</div>`;
   return b;}
 function vJobs(){const roots=sorted('mercs').filter(([id,e])=>!(e.from||[]).some(x=>JOBK.includes(x.k)&&get(x.id))&&(e.to||[]).some(x=>JOBK.includes(x.k)));
   const nat=ui.jn||'';const nats=[...new Set(roots.map(([,e])=>e.nat).filter(Boolean))];
@@ -1221,7 +1221,7 @@ function synChips(n){const memo=SYNM||(SYNM=new Map());const o=synCost(n,memo);i
 let SYNM=null;
 function synHtml(root){SYNM=new Map();const memo=SYNM,acc=new Map();synCollect(root,memo,acc,true);const own=synOwn(root,memo),ct=certOf(root.id);
   if(!acc.size&&!(ct&&ct.p>0))return'';let rows='';for(const [id,q] of acc){rows+=`<div class="mrow">${row(id,chip('×'+fmt(q),'cond'))}</div>${priceLine(id,q)}`;}
-  return`<section class="card"><h2 style="margin-top:0">合成成本</h2><p class="small muted" style="margin:0 0 8px">計晒成條合成路線要用嘅道具。中間嘅兵或者怪物如果拍賣所有證書賣，會同自己合比較，平啲嗰個用嚟計（卡上面會亮起）。打返嚟嘅怪物同已經填咗紅利嘅兵唔計錢。</p>
+  return`<section class="card" id="synbox"><h2 style="margin-top:0">合成成本</h2><p class="small muted" style="margin:0 0 8px">計晒成條合成路線要用嘅道具。中間嘅兵或者怪物如果拍賣所有證書賣，會同自己合比較，平啲嗰個用嚟計（卡上面會亮起）。打返嚟嘅怪物同已經填咗紅利嘅兵唔計錢。</p>
    <div class="mcalc" data-fee="0">${rows||'<p class="muted">呢條路線唔使用道具。</p>'}</div>
    <div class="mtot"><div><span>總成本</span><b id="m-total">${int(Math.round(own))}</b> 兩</div>${ct&&ct.p>0?`<div class="small"><span>直接買證書</span> <a href="#${esc(ct.id)}">${esc(nm(get(ct.id)))}</a> <span>${int(ct.p)} 兩</span>${ct.p<own?' <span>（更平）</span>':''}</div>`:''}</div></section>`;}
 function stagesHtml(root){
@@ -1838,7 +1838,7 @@ function render(){const h=location.hash.replace(/^#/,'')||'home';let cur,html;tr
   renderNav(cur);app.innerHTML=html;
   document.title=(NAVL[cur]&&cur!=='home'?NAVL[cur]+'｜':'')+'巨商全能百科';
   document.querySelectorAll('.lang button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.lang===lang));
-  try{if(h==='bonus')calcBonus();}catch(e){console.error(e);toast('紅利計算出錯：'+(e&&e.message||e));}if(h==='damage')calcDamage();if(h==='exp')calcExp();
+  try{if(h==='bonus'){calcBonus();if(ui.bsyn){ui.bsyn=0;requestAnimationFrame(()=>{const x=document.getElementById('synbox');if(x)x.scrollIntoView({block:'start'});});}}}catch(e){console.error(e);toast('紅利計算出錯：'+(e&&e.message||e));}if(h==='damage')calcDamage();if(h==='exp')calcExp();
   if(ui.enchgo&&h==='ench'){const n=ui.enchgo;ui.enchgo='';const el=[...document.querySelectorAll('[data-affix]')].find(x=>x.dataset.affix===n);if(el){el.classList.add('flash');setTimeout(()=>el.scrollIntoView({block:'center'}),60);}}}
 const editing=()=>/^(new-|edit-|import)/.test(location.hash.replace(/^#/,''));
 const calcing=()=>/^(bonus|damage|exp|mats|craft)$/.test(location.hash.replace(/^#/,''));
@@ -1942,7 +1942,7 @@ app.addEventListener('click',async e=>{const t=e.target;let b;
   if((b=t.closest('[data-natclr]'))){C.nat=C.nat||{};C.nat.sel=[];saveC();render();return;}
   if((b=t.closest('[data-bftoggle]'))){ui.bf=!ui.bf;render();return;}
   if((b=t.closest('[data-bopt]'))){runOpt(b.dataset.bopt);return;}
-  if((b=t.closest('[data-bonusof]'))){C.b.who=b.dataset.bonusof;saveC();return;}
+  if((b=t.closest('[data-bonusof]'))){C.b.who=b.dataset.bonusof;ui.btab=null;ui.bsyn=!!b.dataset.bsyn;saveC();return;}
   if((b=t.closest('[data-dmgskill]'))){const sk=get(b.dataset.dmgskill);const u=(sk&&sk.users||[])[0];if(u&&get(u))setWho(u);C.d.sk=b.dataset.dmgskill;saveC();return;}
   if((b=t.closest('[data-dmgof]'))){setWho(b.dataset.dmgof);saveC();return;}
   if((b=t.closest('[data-tocalc]'))){if(get(b.dataset.tocalc)){C.d.mon=b.dataset.tocalc;C.d.eel='';C.d.eav='';C.d.res='';saveC();}location.hash='#damage';return;}
