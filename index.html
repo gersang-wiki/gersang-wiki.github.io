@@ -1902,7 +1902,7 @@ $('#q').addEventListener('compositionend',()=>{IME=false;onQ();});
 document.querySelector('.lang').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;lang=b.dataset.lang;LS.set('gs-lang',lang);if(editing()){document.querySelectorAll('.lang button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.lang===lang));}else render();trAll();});
 /* ---------- 介面翻譯（英文／韓文） ---------- */
 let I18N=null,TRRE={};const CJKR=/[一-鿿]/;
-fetch('i18n.json').then(r=>r.json()).then(j=>{I18N=j;trAll();}).catch(()=>{});
+fetch('i18n.json',{cache:'no-cache'}).then(r=>r.json()).then(j=>{I18N=j;trAll();}).catch(()=>{});
 function trRe(l){if(TRRE[l])return TRRE[l];const ks=Object.keys(I18N[l]).filter(k=>k.length>=2&&k.length<=40&&!k.includes('#')).sort((a,b)=>b.length-a.length);
   TRRE[l]=ks.length?new RegExp(ks.map(k=>k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|'),'g'):null;return TRRE[l];}
 const PUNC={en:[[/，/g,', '],[/。/g,'. '],[/：/g,': '],[/；/g,'; '],[/（/g,' ('],[/）/g,') '],[/、/g,', '],[/[「」『』]/g,'"'],[/！/g,'! '],[/？/g,'? '],[/｜/g,' | '],[/／/g,' / '],[/＋/g,'+'],[/＝/g,'='],[/－/g,'-'],[/～/g,'~']],
@@ -2078,7 +2078,7 @@ app.addEventListener('submit',e=>{e.preventDefault();if(e.target.id==='edform')s
 
 /* ---------- data ---------- */
 let TALK=null,_tl=null;function loadTalk(){if(_tl)return;_tl=fetch('talk.json').then(r=>r.json()).then(j=>{TALK=j;render();}).catch(()=>{TALK={};});}
-async function loadBase(){try{const r=await fetch('data.json');if(!r.ok)throw 0;const j=await r.json();TK.forEach(k=>{const o=j[k]||{};for(const id in o){const e=o[id];if(!e.sv)e.sv=['tw','gl'];if(!e.src)e.src='t';}BASE[k]=o;rebuild(k);});
+async function loadBase(){try{const r=await fetch('data.json',{cache:'no-cache'});if(!r.ok)throw 0;const j=await r.json();TK.forEach(k=>{const o=j[k]||{};for(const id in o){const e=o[id];if(!e.sv)e.sv=['tw','gl'];if(!e.src)e.src='t';}BASE[k]=o;rebuild(k);});
     baseSrc=j.src||{};ATL=j.atl||{};ALIAS=j.alias||{};SRC={...baseSrc,...dbSrc};X={lvm:Object.fromEntries((j.lv||[]).map(r=>[r[0],r])),fresh:j.fresh,lv:j.lv,pro:j.pro,const:j.const,constCreate:j.constCreate,constEx:j.constEx,grp:j.grp||{},sys:j.sys2||{}};buildAcc();_craft=null;baseOk=true;}
   catch(e){baseOk=false;}schedule();if(!draft)render();}
 /* GitHub Pages 版：冇 Claude 數據庫時改用 Supabase（同一套 collection/doc API） */
