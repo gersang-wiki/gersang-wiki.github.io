@@ -1206,7 +1206,24 @@ function cardHtml(n,root,parent){const i=BNODES.push(n)-1;const s=stOf(n.p),r=n.
   const st=r.t==='statue'&&!fix?Array(r.n).fill(0).map((_,j)=>f(`石像${j+1}`,`min="100" max="200" step="10" data-bs="${i}" data-j="${j}"`,((s.s||[])[j]??'')===''?'':STL((s.s||[])[j]),'100')).join(''):'';
   return`<div class="bcard${root?' root':''}"><div class="bhead"><a class="bface" href="#${esc(n.id)}">${icon(n.e,root?64:48,'face')||icon(n.e,root?64:48)}</a><div style="min-width:0"><a href="#${esc(n.id)}" class="bname">${esc(nm(n.e))}</a><div class="chips" style="margin-top:2px">${chip(n.e.cat)}${!root&&n.how?chip(({'傳說':'傳說將帥合成材料','轉職':'轉職前置','合成':'合成材料'}[n.how]||n.how)+(n.minL>1?'・要 Lv'+n.minL:''),'cond'):''}</div>${parent?`<div class="small muted">→ 用嚟做 ${esc(nm(parent.e))}</div>`:''}</div></div>
    <div class="bform small muted">基本能力 ${n.e.base||0}｜${esc(RULE_TXT(r))}</div>
-   ${ins||alt||st?`<div class="bins">${ins}${alt}${st}</div>`:''}<div class="small out" id="bo-${i}"></div>${fix&&n.kids.length?'<div class="small muted">已填紅利，前置兵唔使計。</div>':''}</div>`;}
+   ${ins||alt||st?`<div class="bins">${ins}${alt}${st}</div>`:''}${synChips(n)}<div class="small out" id="bo-${i}"></div>${fix&&n.kids.length?'<div class="small muted">已填紅利，前置兵唔使計。</div>':''}</div>`;}
+let CERTM=null;function certOf(mid){if(!CERTM){CERTM={};const mz={};[...D.mercs.entries()].forEach(([k,e])=>{if(e&&e.zh&&!mz[e.zh])mz[e.zh]=k;});const EL={'風之精靈':'風','火之精靈':'火','水之精靈':'水','雷之精靈':'雷','地之精靈':'地'};
+   [...D.items.entries()].forEach(([k,e])=>{const z=String(e&&e.zh||'');if(!z.includes('證書')||/不可交易|\d+日|測試|活動/.test(z))return;const m=z.match(/證書\s*[(（](.+?)[)）]\s*$/)||z.match(/證書\s*-\s*(.+)$/);if(!m)return;let u=m[1].trim(),id=mz[u];
+    if(!id){const pe=Object.keys(EL).find(x=>z.startsWith(x));if(pe)id=mz[`${u}(${EL[pe]})`];}if(!id)id=(Object.keys(mz).find(n=>n.startsWith(u+'('))||'')&&mz[Object.keys(mz).find(n=>n.startsWith(u+'('))];if(id)(CERTM[id]=CERTM[id]||[]).push(k);});}
+  const L=CERTM[mid]||[];let best=null;for(const k of L){const p=realPrice(k);if(p>0&&(!best||p<best.p))best={id:k,p};}return best||(L.length?{id:L[0],p:0}:null);}
+function synEnts(n){const r=n.r;if(r.t==='job')return[r.alts[n.ai]];return r.kids||[];}
+function synOwn(n,memo){if(memo.has(n.p))return memo.get(n.p);let c=0;for(const en of synEnts(n))for(const [i,q] of en.items||[])c+=unitPrice(i)*q;for(const k of n.kids)c+=synCost(k,memo).c;memo.set(n.p,c);return c;}
+function synCost(n,memo){const key=n.p+'#c';if(memo.has(key))return memo.get(key);let o;if(hasB(stOf(n.p)))o={c:0,have:1};else{const own=synOwn(n,memo),ct=certOf(n.id);o=ct&&ct.p>0&&(ct.p<own||n.r.t==='base')&&n.r.t!=='base'?{c:ct.p,cert:ct,own}:{c:own,cert:ct,own};if(n.r.t==='base')o={c:0,cert:ct,own:0,base:1};}memo.set(key,o);return o;}
+function synCollect(n,memo,acc,root){const o=synCost(n,memo);if(o.have)return;if(!root&&o.cert&&o.cert.p>0&&o.c===o.cert.p&&o.cert.p<o.own){acc.set(o.cert.id,(acc.get(o.cert.id)||0)+1);return;}
+  for(const en of synEnts(n))for(const [i,q] of en.items||[])acc.set(i,(acc.get(i)||0)+q);n.kids.forEach(k=>synCollect(k,memo,acc,false));}
+function synChips(n){const memo=SYNM||(SYNM=new Map());const o=synCost(n,memo);if(o.have||o.base&&!(o.cert&&o.cert.p>0))return'';const ct=o.cert&&o.cert.p>0?o.cert:null;
+  return`<div class="chips" style="margin-top:4px">${ct?chip('證書 '+int(ct.p)+' 兩',ct.p<o.own?'hot':''):''}${o.base?'':chip('自己合 '+int(Math.round(o.own))+' 兩',!ct||o.own<=ct.p?'hot':'')}</div>`;}
+let SYNM=null;
+function synHtml(root){SYNM=new Map();const memo=SYNM,acc=new Map();synCollect(root,memo,acc,true);const own=synOwn(root,memo),ct=certOf(root.id);
+  if(!acc.size&&!(ct&&ct.p>0))return'';let rows='';for(const [id,q] of acc){rows+=`<div class="mrow">${row(id,chip('×'+fmt(q),'cond'))}</div>${priceLine(id,q)}`;}
+  return`<section class="card"><h2 style="margin-top:0">合成成本</h2><p class="small muted" style="margin:0 0 8px">計晒成條合成路線要用嘅道具。中間嘅兵或者怪物如果拍賣所有證書賣，會同自己合比較，平啲嗰個用嚟計（卡上面會亮起）。打返嚟嘅怪物同已經填咗紅利嘅兵唔計錢。</p>
+   <div class="mcalc" data-fee="0">${rows||'<p class="muted">呢條路線唔使用道具。</p>'}</div>
+   <div class="mtot"><div><span>總成本</span><b id="m-total">${int(Math.round(own))}</b> 兩</div>${ct&&ct.p>0?`<div class="small"><span>直接買證書</span> <a href="#${esc(ct.id)}">${esc(nm(get(ct.id)))}</a> <span>${int(ct.p)} 兩</span>${ct.p<own?' <span>（更平）</span>':''}</div>`:''}</div></section>`;}
 function stagesHtml(root){
   const tree=(n,root_)=>{const kids=hasB(stOf(n.p))?[]:n.kids;
     return`<div class="bt">${cardHtml(n,root_,null)}${kids.length?`<div class="bkids">${kids.map(k=>`<div class="bkid">${tree(k,false)}</div>`).join('')}</div>`:''}</div>`;};
@@ -1235,7 +1252,7 @@ function vBonus(){const b=C.b;const tgt=b.who&&get(b.who)?b.who:'';BNODES=[];
     <div class="grid2" style="margin-top:10px">${ci('b','wh','最終角色白衣從軍（0–300）')}${ci('b','tg','目標紅利')}</div>
     <div class="bar" style="margin-top:10px"><button type="button" class="btn pri" data-bopt="max">一鍵最高紅利</button><button type="button" class="btn pri" data-bopt="tg">計目標紅利最少經驗</button><button type="button" class="btn" data-bopt="min">填返最低等級</button><button type="button" class="btn" data-bopt="clr">清除</button></div>
     <div id="o-bopt" class="small" style="margin-top:8px"></div></section>
-   <section class="card ${ui.bf?'showf':''}" id="btreebox"><div class="bar between"><h2 style="margin:0">合成路線</h2><button type="button" class="btn" data-bftoggle="1" aria-pressed="${!!ui.bf}">${ui.bf?'收起計算過程':'顯示計算過程'}</button></div>${stagesHtml(BT)}</section>`:''}
+   <section class="card ${ui.bf?'showf':''}" id="btreebox"><div class="bar between"><h2 style="margin:0">合成路線</h2><button type="button" class="btn" data-bftoggle="1" aria-pressed="${!!ui.bf}">${ui.bf?'收起計算過程':'顯示計算過程'}</button></div>${stagesHtml(BT)}</section>${synHtml(BT)}`:''}
   <section class="card"><h2>白衣從軍</h2><div class="grid2">${ci('b','mu','白衣從軍時等級')}</div><div id="o-b4" class="out" style="margin-top:10px"></div>
    <p class="small muted" style="margin:8px 0 0">白衣從軍：等級 ÷ 2，永久累積，唔會被轉職公式 ÷ 5。</p></section>
   <details class="fx"><summary>計算規則同資料來源</summary><div class="small" style="display:grid;gap:6px">
