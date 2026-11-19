@@ -277,7 +277,7 @@ const MCAT=['主角','傭兵','1次將帥','2次將帥','改造將帥','覺醒�
 const FAC={monsters:[['nat','地區'],['zone','地圖區域','nat'],['el','屬性'],['mlv','定類魔法等級'],['grade','階級'],['move','類型']],
   mercs:[['cat','類別'],['job','轉職','cat'],['nat','國家']],skills:[['who','類別'],['ucat','兵種類別'],['calc','傷害公式']],
   items:[['cat','分類'],['sub','細分類','cat']],places:[['region','類型']],combos:[],quests:[['qt','類型'],['lvb','等級']],npcs:[['fn','功能'],['nat','國家']]};
-const SORTS={monsters:[['nm','名稱'],['exp','經驗值'],['hp','生命'],['ev','掉落期望價值']],mercs:[['nm','名稱'],['base','基本能力']],skills:[['nm','名稱'],['cost','魔力消耗']],quests:[['lv','等級（低至高）',1],['nm','名稱']]};
+const SORTS={monsters:[['nm','名稱'],['exp','經驗值'],['hp','生命'],['ev','掉落期望價值']],mercs:[['nm','名稱'],['base','基本能力']],skills:[['nm','名稱'],['cost','魔力消耗']],quests:[['lv','等級（低至高）',1],['nm','名稱']],combos:[['nm','名稱'],['cexp','經驗值'],['ev','掉落期望價值']]};
 const D={},BASE={},DBD={},SC={};TK.forEach(k=>{D[k]=new Map();BASE[k]={};DBD[k]=[];});
 let baseSrc={},dbSrc={},baseOk=false,ATL={},X={};
 const IMGV='20261114d';let SRC={},lang='zh',db=null,user=null,canWrite=null,load='loading',got={},filt={},sortBy={},shown={},draft=null,busy=false,ui={};
@@ -351,6 +351,7 @@ const qty=(arr)=>(arr||[]).map(d=>`${nm(get(d.i||d[0]))}×${d.q||d[1]}`).join('�
 
 /* ---------- reverse lookups ---------- */
 function dropVal(id){if(MPR[id]!==''&&MPR[id]!=null)return{u:N(MPR[id]),k:'own'};const m=mkt(id);if(m)return{u:N(m.p),k:'A'};const b=sellPrice(id);return b>0?{u:b,k:'N'}:{u:0,k:''};}
+function comboEV(c){let v=0;const L=[];for(const m of c.mons||[]){const x=get(m.i);if(!x)continue;const q=N(m.q||1),ev=monEV(x).v*q;v+=ev;L.push({i:m.i,q,ev});}return{v,L};}
 function monEV(e){let v=0;const L=[];for(const d of e.drops||[]){const p=parseFloat(d.p)/100;if(!(p>0))continue;const x=dropVal(d.i),ev=p*x.u;v+=ev;L.push({i:d.i,p,u:x.u,k:x.k,ev});}return{v,L};}
 const droppedBy=i=>sorted('monsters').filter(([,m])=>(m.drops||[]).some(d=>d.i===i));
 const usedInItems=i=>sorted('items').filter(([,x])=>(x.recipe||[]).some(d=>d.i===i));
@@ -432,7 +433,7 @@ function sideFor(t,e){
   if(t==='mercs')return chip(e.cat)+chip(e.job)+chip(e.nat);
   if(t==='skills')return e.f?chip('有公式','hot'):'';
   if(t==='items')return chip(e.sub||e.cat);
-  if(t==='combos')return chip(int(comboExp(e))+' 經驗','hot');
+  if(t==='combos')return chip(int(comboExp(e))+' 經驗','hot')+(sortBy.combos==='ev'?chip('每場 '+int(Math.round(comboEV(e).v))+' 兩','hot'):'');
   if(t==='quests')return (e.lv?chip('Lv '+e.lv,'hot'):'')+(e.pre&&D.quests.has(e.pre)?chip('有前置','cond'):'');
   return'';}
 function subFor(t,e){
@@ -465,7 +466,7 @@ function vList(t){
   for(const [k] of FAC[t].concat([['sv']]))if(f[k])all=all.filter(([,e])=>facVal(t,e,k).includes(f[k]));
   let hidN=0;if(t==='npcs'&&!f.fn&&!q){const b=all.length;all=all.filter(([,e])=>!(e.fn||[]).some(x=>x==='商團資訊'||x==='出口'));hidN=b-all.length;}
   const so=sortBy[t]||(SORTS[t]?SORTS[t][0][0]:'nm');const asc=SORTS[t]&&(SORTS[t].find(x=>x[0]===so)||[])[2];
-  if(so==='ev'){const V=new Map(all.map(([k,e])=>[k,monEV(e).v]));all=[...all].sort((a,b)=>V.get(b[0])-V.get(a[0]));}
+  if(so==='ev'||so==='cexp'){const V=new Map(all.map(([k,e])=>[k,so==='cexp'?comboExp(e):t==='combos'?comboEV(e).v:monEV(e).v]));all=[...all].sort((a,b)=>V.get(b[0])-V.get(a[0]));}
   else if(so!=='nm')all=[...all].sort((a,b)=>asc?N(a[1][so]||9999)-N(b[1][so]||9999):N(b[1][so])-N(a[1][so]));
   const lim=shown[t]||100;
   const sortUi=SORTS[t]?`<label class="f" style="max-width:180px">排序<select id="sortsel">${SORTS[t].map(s=>`<option value="${s[0]}" ${so===s[0]?'selected':''}>${s[1]}</option>`).join('')}</select></label>`:'';
@@ -603,7 +604,12 @@ function vDetail(id,t,e){
   if(t==='quests')b+=questDetail(id,e);
   if(t==='combos'){if(e.lead)b+=section('主怪物',rows([row(e.lead)]));b+=section('地點',e.at?rows([row(e.at)]):'');
     b+=section(`怪物隊員（共 ${(e.mons||[]).reduce((a,m)=>a+N(m.q||1),0)} 隻）`,comboCard(id,e,null,true));
-    b+=section('經驗',`<p class="big" style="margin:0">${int(comboExp(e))}</p><p class="small muted" style="margin:4px 0 0">每場怪物經驗合計（未計加成）</p><div class="bar" style="margin-top:10px"><a class="btn pri" href="#exp" data-expcombo="${esc(id)}">用呢個組合計升級</a></div>`);}
+    b+=section('經驗',`<p class="big" style="margin:0">${int(comboExp(e))}</p><p class="small muted" style="margin:4px 0 0">每場怪物經驗合計（未計加成）</p><div class="bar" style="margin-top:10px"><a class="btn pri" href="#exp" data-expcombo="${esc(id)}">用呢個組合計升級</a></div>`);
+    {const EV=comboEV(e),ex=comboExp(e);if(EV.v>0){const top=[...EV.L].sort((a,b)=>b.ev-a.ev).filter(x=>x.ev/EV.v>=0.01);
+      b+=section('掉落期望價值',`<div class="big">${int(Math.round(EV.v))} 兩</div><div class="small muted">平均每打一場</div>
+      <table class="bd" style="margin-top:8px"><tr><td>每 1,000 場</td><td>${int(Math.round(EV.v*1000))} 兩</td></tr>${ex?`<tr><td>每 1 點經驗</td><td>${(Math.round(EV.v/ex*100)/100).toLocaleString('en-US')} 兩</td></tr>`:''}</table>
+      ${rows(top.map(x=>row(x.i,chip('×'+x.q,'cond')+chip(int(Math.round(x.ev))+' 兩'),Math.round(x.ev/EV.v*100)+'%')))}
+      <p class="small muted" style="margin:6px 0 0">每隻怪物嘅掉落期望價值 × 隻數，再加埋。單價用國際服拍賣所 30 日最低價；拍賣所冇價嘅用賣 NPC 價。</p>`);}}}
   if(t==='npcs'){
     b+=section('所在地點',e.at?rows([row(e.at)]):'');
     b+=npcShopHtml(id);
@@ -1084,7 +1090,7 @@ function comboCard(cid,c,cur,bare){const ed=canEditCombo();const L=c.mons||[];
     <span class="small muted cbe">${x&&x.exp?int(N(x.exp)*N(m.q||1)):''}</span>
     ${ed?`<input type="number" min="1" max="99" value="${esc(m.q||1)}" data-cbq="${esc(cid)}" data-i="${i}" aria-label="隻數"><button type="button" class="cbx" data-cbrm="${esc(cid)}" data-i="${i}" aria-label="移除">✕</button>`:`<b>×${m.q||1}</b>`}</div>`;};
   const q=(ui.cbadd||{})[cid]||'';const hits=q?sorted('monsters').filter(([,m])=>hay(m).includes(q.toLowerCase())).slice(0,6):[];
-  return`<div class="cbc">${bare?'':`<div class="cbh"><a class="pname" href="#${esc(cid)}">${esc(nm(c))}</a>${c.at&&get(c.at)?`<span class="small muted">${esc(nm(get(c.at)))}</span>`:''}<span class="chip hot">${int(comboExp(c))} 經驗</span></div>`}
+  return`<div class="cbc">${bare?'':`<div class="cbh"><a class="pname" href="#${esc(cid)}">${esc(nm(c))}</a>${c.at&&get(c.at)?`<span class="small muted">${esc(nm(get(c.at)))}</span>`:''}<span class="chip hot">${int(comboExp(c))} 經驗</span>${comboEV(c).v>0?`<span class="chip">每場 ${int(Math.round(comboEV(c).v))} 兩</span>`:''}</div>`}
    <div class="cbl">${L.map(mrow).join('')||'<span class="small muted">未有隊員</span>'}</div>
    ${ed?`<div class="cbadd"><input type="search" placeholder="＋ 加怪物（打名）" value="${esc(q)}" data-cbadd="${esc(cid)}">${hits.length?`<div class="sug">${hits.map(([mid,m])=>`<button type="button" data-cbpick="${esc(cid)}" data-m="${esc(mid)}">${esc(nm(m))} <span class="muted small">經驗 ${N(m.exp)}</span></button>`).join('')}</div>`:''}</div>`:''}
    <div class="small muted" style="margin-top:4px">共 ${L.reduce((a,m)=>a+N(m.q||1),0)} 隻${ed?'｜改數量會即刻儲存，大家都睇到':''}</div></div>`;}
