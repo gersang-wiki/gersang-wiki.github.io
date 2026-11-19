@@ -551,6 +551,7 @@ function vDetail(id,t,e){
     const pg=proGather(id);
     if(pg.length)b+=section('採集',`<table class="dt"><tr><th>技能</th><th class="r">需要等級</th><th class="r">費用</th></tr>${pg.map(([k,p])=>`<tr><td><a href="#pro">${PRO_L[k]}</a></td><td class="r">${p.lv}</td><td class="r">${int(p.fee)}</td></tr>`).join('')}</table>`);
     const mk=(e.recipe||[]).length||e.by,po=proOf(id);
+    {const st=statOf(id);if(st&&get(st.mon))b+=section('點樣製作',rows([row(st.mon,chip('合成再封印','hot')+chip('Lv '+st.lv))])+`<p class="small muted" style="margin:8px 0 0">合成呢隻幻獸，練到 Lv ${st.lv} 或以上，再封印成石像。</p><div class="bar" style="margin-top:8px"><a class="btn" href="#mats" data-matsof="${esc(id)}">計埋所有原材料</a></div>`);}
     if(mk||po.length)b+=section('點樣製作',(e.by?rows([row(e.by,chip('製作 NPC'),get(e.by)&&get(e.by).at?nm(get(get(e.by).at)):'')]):'')+pairRows(e.recipe,'q')
       +po.map(([k,p])=>`<p class="small" style="margin:10px 0 4px"><a href="#pro">${PRO_L[k]}</a> Lv ${p.lv}–${p.cap}，每次做 ${p.n} 件，手續費 ${int(p.fee)}</p>${rows(p.m.map(m=>row(m[0],chip('×'+m[1],'cond')+(m[2]?chip('+'+m[2]):''))))}`).join('')
       +`<div class="bar" style="margin-top:8px"><a class="btn" href="#mats" data-matsof="${esc(id)}">計埋所有原材料</a></div>`);
@@ -559,7 +560,7 @@ function vDetail(id,t,e){
       .concat(pu.map(([k,p])=>row(p.it,chip(PRO_L[k])+chip('×'+p.m.find(m=>m[0]===id)[1],'cond'))))
       .concat(qn.map(([x,qq])=>{const d=qq.need.find(r=>r.i===id);return row(x,chip('任務需要')+(d.q?chip('×'+d.q,'cond'):''));}))));
     b+=section('任務獎勵',rows(qg.map(([x])=>row(x,chip('任務')))));
-    if(!((itemSources().S[id]||[]).length)&&!((itemSources().U[id]||[]).length)&&!buyMap().get(id)&&!(SY().ticket||[]).some(x=>x[0]===id||x[1]===id)&&!(SY().starst||{})[id]&&!((SY().reinf||{}).mat||{})[id]&&!dm.length&&!mk&&!po.length&&!ui2.length&&!qn.length&&!qg.length&&!pu.length&&!pg.length)b+=`<p class="note">呢件道具暫時未有掉落、製作或者用途嘅連結資料。</p>`;}
+    if(!((itemSources().S[id]||[]).length)&&!((itemSources().U[id]||[]).length)&&!buyMap().get(id)&&!(SY().ticket||[]).some(x=>x[0]===id||x[1]===id)&&!(SY().starst||{})[id]&&!((SY().reinf||{}).mat||{})[id]&&!dm.length&&!mk&&!statOf(id)&&!po.length&&!ui2.length&&!qn.length&&!qg.length&&!pu.length&&!pg.length)b+=`<p class="note">呢件道具暫時未有掉落、製作或者用途嘅連結資料。</p>`;}
   if(t==='places'){
     if(e.map)b+=`<section class="card" style="padding:0;overflow:hidden;background:#000"><a href="img/map/${esc(e.map[0])}.jpg" target="_blank" rel="noopener" aria-label="開大圖"><img src="img/map/${esc(e.map[0])}.jpg" width="${e.map[1]}" height="${e.map[2]}" alt="${esc(nm(e))} 小地圖" loading="lazy" style="display:block;width:100%;height:auto"></a></section>`;
     if(e.of&&get(e.of))b+=`<p class="small muted" style="margin:-6px 0 12px">呢個係遊戲怪物圖鑑嘅寫法，即係地圖 <a href="#${esc(e.of)}">${esc(nm(get(e.of)))}</a>。</p>`;
@@ -695,9 +696,10 @@ function mercDetail(id,e){let b='';const s=e.st||{};
   const fr=(e.from||[]).filter(x=>get(x.id));
   if(fr.length)b+=section(e.legend?'傳說將帥材料':'由邊個轉過嚟',rows(fr.map(x=>row(x.id,(e.legend?(get(x.id).cat?chip(get(x.id).cat):''):chip(x.k,'cond'))+(x.lv?chip('Lv '+x.lv):''))))
     +(fr.some(x=>x.items)?`<p class="small muted" style="margin:10px 0 4px">另外需要道具</p>`+rows(fr.flatMap(x=>(x.items||[]).map(it=>row(it[0],chip('×'+it[1],'cond'))))):''));
+  if(e.summon&&get(e.summon))b+=section('召喚道具',rows([row(e.summon,chip('×1','cond'))]));
   const r=rootOf(id);
   if(get(r)&&(get(r).to||[]).length)b+=section('完整轉職路線',`<div class="tree"><ul>${treeHtml(r,id)}</ul></div>`);
-  b+=`<div class="bar"><a class="btn" href="#bonus" data-bonusof="${esc(id)}">計呢個角色嘅紅利</a>${fr.length?`<a class="btn" href="#bonus" data-bonusof="${esc(id)}" data-bsyn="1">計合成成本</a>`:''}${(e.sk||[]).some(k=>get(k)&&get(k).f)?`<a class="btn" href="#damage" data-dmgof="${esc(id)}">用佢嘅技能計傷害</a>`:''}</div>`;
+  b+=`<div class="bar"><a class="btn" href="#bonus" data-bonusof="${esc(id)}">計呢個角色嘅紅利</a>${fr.length||e.summon||ruleOf(id).t==='statue'?`<a class="btn" href="#bonus" data-bonusof="${esc(id)}" data-bsyn="1">計合成成本</a>`:''}${(e.sk||[]).some(k=>get(k)&&get(k).f)?`<a class="btn" href="#damage" data-dmgof="${esc(id)}">用佢嘅技能計傷害</a>`:''}</div>`;
   return b;}
 function vJobs(){const roots=sorted('mercs').filter(([id,e])=>!(e.from||[]).some(x=>JOBK.includes(x.k)&&get(x.id))&&(e.to||[]).some(x=>JOBK.includes(x.k)));
   const nat=ui.jn||'';const nats=[...new Set(roots.map(([,e])=>e.nat).filter(Boolean))];
@@ -766,7 +768,8 @@ let MFEE=LS.get('gs-mfee',{}),MWAGE=LS.get('gs-mwage',{});const wageOf=id=>MWAGE
 function altPickN(r){const P=a=>{const p=realPrice(a);return p>0?p:Infinity;};return [...r.alt].sort((a,b)=>P(a)-P(b)).slice(0,Math.min(+r.q,r.alt.length));}
 function recipeFor(id){const r=recipeFor0(id);if(r){r.fee0=r.fee||0;r.fee0x=r.feeX||0;if(MFEE[id]!==''&&MFEE[id]!=null){r.fee=N(MFEE[id]);r.ownFee=1;}}return r;}
 const vilOf=e=>{const m=String(e&&e.note||'').match(/^(?:村莊生產（|在印度村莊)([^，（(]+?)(?:，|製作)/);return m?m[1]:'';};
-function recipeFor0(id){const e=get(id);if(e&&(e.recipe||[]).length)return{y:+((String(e.note||'').match(/每次\s*(\d+)\s*個/)||[])[1]||1),feeX:craftFee(e),fee:craftFee(e)+wlOf(e)*wageOf(id),wl:wlOf(e),wage:wageOf(id),m:e.recipe.filter(r=>/^\d+$/.test(String(r.q))).flatMap(r=>r.alt?(r.d?altPickN(r).map(a=>[a,1,r.g]):[[altPick(r),+r.q,r.g]]):[[r.i,+r.q]]),tools:e.recipe.filter(r=>!/^\d+$/.test(String(r.q))).map(r=>r.i),how:vilOf(e)?'印度村莊 '+vilOf(e):e.by?'NPC':'製作'};
+function recipeFor0(id){const st=statOf(id);if(st){const m=routeItems(st.mon);return m.length?{y:1,m,tools:[],how:'合成再封印',fee:0}:null;}
+  const e=get(id);if(e&&(e.recipe||[]).length)return{y:+((String(e.note||'').match(/每次\s*(\d+)\s*個/)||[])[1]||1),feeX:craftFee(e),fee:craftFee(e)+wlOf(e)*wageOf(id),wl:wlOf(e),wage:wageOf(id),m:e.recipe.filter(r=>/^\d+$/.test(String(r.q))).flatMap(r=>r.alt?(r.d?altPickN(r).map(a=>[a,1,r.g]):[[altPick(r),+r.q,r.g]]):[[r.i,+r.q]]),tools:e.recipe.filter(r=>!/^\d+$/.test(String(r.q))).map(r=>r.i),how:vilOf(e)?'印度村莊 '+vilOf(e):e.by?'NPC':'製作'};
   const p=proOf(id)[0];if(p)return{y:p[1].n||1,m:p[1].m.map(m=>[m[0],m[1]]),tools:[],how:PRO_L[p[0]],fee:p[1].fee};return null;}
 let MNC=LS.get('gs-mnocraft',{});
 const buyIt=(id,depth)=>depth>0&&!!MNC[id];
@@ -1211,13 +1214,34 @@ let CERTM=null;function certOf(mid){if(!CERTM){CERTM={};const mz={};[...D.mercs.
    [...D.items.entries()].forEach(([k,e])=>{const z=String(e&&e.zh||'');if(!z.includes('證書')||/不可交易|\d+日|測試|活動/.test(z))return;const m=z.match(/證書\s*[(（](.+?)[)）]\s*$/)||z.match(/證書\s*-\s*(.+)$/);if(!m)return;let u=m[1].trim(),id=mz[u];
     if(!id){const pe=Object.keys(EL).find(x=>z.startsWith(x));if(pe)id=mz[`${u}(${EL[pe]})`];}if(!id)id=(Object.keys(mz).find(n=>n.startsWith(u+'('))||'')&&mz[Object.keys(mz).find(n=>n.startsWith(u+'('))];if(id)(CERTM[id]=CERTM[id]||[]).push(k);});}
   const L=CERTM[mid]||[];let best=null;for(const k of L){const p=realPrice(k);if(p>0&&(!best||p<best.p))best={id:k,p};}return best||(L.length?{id:L[0],p:0}:null);}
-function synEnts(n){const r=n.r;if(r.t==='job')return[r.alts[n.ai]];return r.kids||[];}
+function synEnts(n){const r=n.r;if(r.t==='base'&&n.e&&n.e.summon&&get(n.e.summon))return[{items:[[n.e.summon,1]]}];if(r.t==='job')return[r.alts[n.ai]];if(r.t==='statue')return[{items:statueItems(n.id,Array.from({length:r.n||3},(_,j)=>((stOf(n.p).s||[])[j])||100))}];return r.kids||[];}
+let STATM=null;function statIdx(){if(STATM)return STATM;STATM={it:{},root:{},types:{幻獸:[],神獸:[]}};
+  (SY().statue||[]).forEach(x=>{const m=x.mon&&get(x.mon);if(!m)return;const L={};(x.l||[]).forEach(([lv,id])=>{const e=get(id);if(!e||/不可交易/.test(e.zh||''))return;if(!lv){STATM.root[x.mon]=STATM.root[x.mon]||id;return;}L[lv]=id;STATM.it[id]={mon:x.mon,lv};});
+    if(Object.keys(L).length&&STATM.types[m.cat])STATM.types[m.cat].push({mon:x.mon,L});});return STATM;}
+const statOf=id=>statIdx().it[id]||null;
+let ROUTE={};const SEAL='gi3506';
+function statueItems(mid,lvs){const r=ruleOf(mid),X=statIdx(),out=[];const n=r.n||3;
+  const T=n===4?X.types['神獸']:X.types['幻獸'];const used=new Set();
+  for(let j=0;j<n;j++){const want=lvs?STL(lvs[j]):0;let best=null,bp=Infinity;
+    for(const t of T){if(used.has(t.mon))continue;const lv=want||Math.min(...Object.keys(t.L).map(Number));const id=t.L[lv];if(!id)continue;const c=synUnit(id);const cc=c>0?c:1e18;if(!best||cc<bp){bp=cc;best={t,id};}}
+    if(best){used.add(best.t.mon);out.push([best.id,1]);}}
+  const rt=X.root[mid];if(rt)out.push([rt,10]);if(get(SEAL))out.push([SEAL,n]);return out;}
+const itemsCost=L=>L.reduce((a,[i,q])=>a+synUnit(i)*q,0);
+function routeItems(mid,depth){depth=depth||0;if(ROUTE[mid])return ROUTE[mid];ROUTE[mid]=[];if(depth>9)return[];const r=ruleOf(mid);let out=[];
+  const sub=en=>[...(en.items||[]),...routeItems(en.id,depth+1)];
+  const sm=get(mid)&&get(mid).summon;if(r.t==='base'&&sm&&get(sm))out=[[sm,1]];
+  else if(r.t==='statue')out=statueItems(mid,null);
+  else if(r.t==='job'){let bc=Infinity;for(const a of r.alts){const L=sub(a),c=itemsCost(L);if(c<bc){bc=c;out=L;}}}
+  else if(r.kids)out=r.kids.flatMap(sub);
+  const ct=certOf(mid);if(ct&&ct.p>0&&r.t!=='base'&&ct.p<itemsCost(out))out=[[ct.id,1]];
+  const mm=new Map();out.forEach(([i,q])=>mm.set(i,(mm.get(i)||0)+q));return ROUTE[mid]=[...mm];}
 let SYNA={};const SYNP=['~syn'];
 function synAuto(id){if(SYNA['#'+id])return;SYNA['#'+id]=1;const s=MNC;MNC=SYNA;try{const walk=(x,path,depth)=>{const r=depth<6&&!path.includes(x)?recipeFor(x):null;if(!r||!r.m.length)return;for(const [m] of r.m)walk(m,[...path,x],depth+1);
     if(!('@'+x in SYNA)){SYNA['@'+x]=1;delete SYNA[x];const b=realPrice(x),c=craftReal(x,path,depth,true);if(b>0&&isFinite(c)&&b<c)SYNA[x]=1;}};walk(id,SYNP,1);}finally{MNC=s;}}
-function synUnit(id){synAuto(id);const s=MNC;MNC=SYNA;try{const b=unitPrice(id),c=craftReal(id,SYNP,1,false);return isFinite(c)&&c>0&&!(b>0&&b<=c)?c:(b||0);}finally{MNC=s;}}
+function synUnit(id){synAuto(id);const s=MNC;MNC=SYNA;try{const b=realPrice(id),c=craftReal(id,SYNP,1,false);return b>0&&!(isFinite(c)&&c<b)?b:isFinite(c)&&c>0?c:unitPrice(id);}finally{MNC=s;}}
 function synOwn(n,memo){if(memo.has(n.p))return memo.get(n.p);let c=0;for(const en of synEnts(n))for(const [i,q] of en.items||[])c+=synUnit(i)*q;for(const k of n.kids)c+=synCost(k,memo).c;memo.set(n.p,c);return c;}
-function synCost(n,memo){const key=n.p+'#c';if(memo.has(key))return memo.get(key);let o;if(hasB(stOf(n.p)))o={c:0,have:1};else{const own=synOwn(n,memo),ct=certOf(n.id);o=ct&&ct.p>0&&(ct.p<own||n.r.t==='base')&&n.r.t!=='base'?{c:ct.p,cert:ct,own}:{c:own,cert:ct,own};if(n.r.t==='base')o={c:0,cert:ct,own:0,base:1};}memo.set(key,o);return o;}
+const synFree=n=>n.r.t==='base'&&!(n.e&&n.e.summon&&get(n.e.summon));
+function synCost(n,memo){const key=n.p+'#c';if(memo.has(key))return memo.get(key);let o;if(hasB(stOf(n.p)))o={c:0,have:1};else{const own=synOwn(n,memo),ct=certOf(n.id);o=ct&&ct.p>0&&(ct.p<own||synFree(n))&&n.r.t!=='base'?{c:ct.p,cert:ct,own}:{c:own,cert:ct,own};if(synFree(n))o={c:0,cert:ct,own:0,base:1};}memo.set(key,o);return o;}
 function synCollect(n,memo,acc,root){const o=synCost(n,memo);if(o.have)return;if(!root&&o.cert&&o.cert.p>0&&o.c===o.cert.p&&o.cert.p<o.own){acc.set(o.cert.id,(acc.get(o.cert.id)||0)+1);return;}
   for(const en of synEnts(n))for(const [i,q] of en.items||[])acc.set(i,(acc.get(i)||0)+q);n.kids.forEach(k=>synCollect(k,memo,acc,false));}
 function synChips(n){const memo=SYNM||(SYNM=new Map());const o=synCost(n,memo);if(o.have||o.base&&!(o.cert&&o.cert.p>0))return'';const ct=o.cert&&o.cert.p>0?o.cert:null;
@@ -1841,7 +1865,7 @@ function route(h){
     return['edit',draft?vEdit():`<h1>呢筆資料唔可以編輯</h1>${statusBox()}<p><a href="#home">返回首頁</a></p>`];}
   const f=find(h);if(f){visit(h);return[f[0],vDetail(h,f[0],f[1])];}
   return['',`${crumb([['搵唔到']])}<h1>搵唔到呢筆資料</h1>${statusBox()}<p class="muted">可能已經刪除，或者資料仲未載入完。</p><p><a href="#home">返回首頁</a></p>`];}
-function render(){const h=location.hash.replace(/^#/,'')||'home';let cur,html;try{[cur,html]=route(h);}catch(e){console.error(e);cur='';html=`<h1>頁面出錯</h1><p>請截圖呢段俾開發者：</p><pre class="small" style="white-space:pre-wrap">${esc(String(e&&e.stack||e).slice(0,800))}</pre><p><a href="#home">返回首頁</a></p>`;}
+function render(){ROUTE={};STATM=null;const h=location.hash.replace(/^#/,'')||'home';let cur,html;try{[cur,html]=route(h);}catch(e){console.error(e);cur='';html=`<h1>頁面出錯</h1><p>請截圖呢段俾開發者：</p><pre class="small" style="white-space:pre-wrap">${esc(String(e&&e.stack||e).slice(0,800))}</pre><p><a href="#home">返回首頁</a></p>`;}
   renderNav(cur);app.innerHTML=html;
   document.title=(NAVL[cur]&&cur!=='home'?NAVL[cur]+'｜':'')+'巨商全能百科';
   document.querySelectorAll('.lang button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.lang===lang));
