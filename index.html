@@ -1212,17 +1212,24 @@ let CERTM=null;function certOf(mid){if(!CERTM){CERTM={};const mz={};[...D.mercs.
     if(!id){const pe=Object.keys(EL).find(x=>z.startsWith(x));if(pe)id=mz[`${u}(${EL[pe]})`];}if(!id)id=(Object.keys(mz).find(n=>n.startsWith(u+'('))||'')&&mz[Object.keys(mz).find(n=>n.startsWith(u+'('))];if(id)(CERTM[id]=CERTM[id]||[]).push(k);});}
   const L=CERTM[mid]||[];let best=null;for(const k of L){const p=realPrice(k);if(p>0&&(!best||p<best.p))best={id:k,p};}return best||(L.length?{id:L[0],p:0}:null);}
 function synEnts(n){const r=n.r;if(r.t==='job')return[r.alts[n.ai]];return r.kids||[];}
-function synOwn(n,memo){if(memo.has(n.p))return memo.get(n.p);let c=0;for(const en of synEnts(n))for(const [i,q] of en.items||[])c+=unitPrice(i)*q;for(const k of n.kids)c+=synCost(k,memo).c;memo.set(n.p,c);return c;}
+let SYNA={};const SYNP=['~syn'];
+function synAuto(id){if(SYNA['#'+id])return;SYNA['#'+id]=1;const s=MNC;MNC=SYNA;try{const walk=(x,path,depth)=>{const r=depth<6&&!path.includes(x)?recipeFor(x):null;if(!r||!r.m.length)return;for(const [m] of r.m)walk(m,[...path,x],depth+1);
+    if(!('@'+x in SYNA)){SYNA['@'+x]=1;delete SYNA[x];const b=realPrice(x),c=craftReal(x,path,depth,true);if(b>0&&isFinite(c)&&b<c)SYNA[x]=1;}};walk(id,SYNP,1);}finally{MNC=s;}}
+function synUnit(id){synAuto(id);const s=MNC;MNC=SYNA;try{const b=unitPrice(id),c=craftReal(id,SYNP,1,false);return isFinite(c)&&c>0&&!(b>0&&b<=c)?c:(b||0);}finally{MNC=s;}}
+function synOwn(n,memo){if(memo.has(n.p))return memo.get(n.p);let c=0;for(const en of synEnts(n))for(const [i,q] of en.items||[])c+=synUnit(i)*q;for(const k of n.kids)c+=synCost(k,memo).c;memo.set(n.p,c);return c;}
 function synCost(n,memo){const key=n.p+'#c';if(memo.has(key))return memo.get(key);let o;if(hasB(stOf(n.p)))o={c:0,have:1};else{const own=synOwn(n,memo),ct=certOf(n.id);o=ct&&ct.p>0&&(ct.p<own||n.r.t==='base')&&n.r.t!=='base'?{c:ct.p,cert:ct,own}:{c:own,cert:ct,own};if(n.r.t==='base')o={c:0,cert:ct,own:0,base:1};}memo.set(key,o);return o;}
 function synCollect(n,memo,acc,root){const o=synCost(n,memo);if(o.have)return;if(!root&&o.cert&&o.cert.p>0&&o.c===o.cert.p&&o.cert.p<o.own){acc.set(o.cert.id,(acc.get(o.cert.id)||0)+1);return;}
   for(const en of synEnts(n))for(const [i,q] of en.items||[])acc.set(i,(acc.get(i)||0)+q);n.kids.forEach(k=>synCollect(k,memo,acc,false));}
 function synChips(n){const memo=SYNM||(SYNM=new Map());const o=synCost(n,memo);if(o.have||o.base&&!(o.cert&&o.cert.p>0))return'';const ct=o.cert&&o.cert.p>0?o.cert:null;
   return`<div class="chips" style="margin-top:4px">${ct?chip('證書 '+int(ct.p)+' 兩',ct.p<o.own?'hot':''):''}${o.base?'':chip('自己合 '+int(Math.round(o.own))+' 兩',!ct||o.own<=ct.p?'hot':'')}</div>`;}
 let SYNM=null;
-function synHtml(root){SYNM=new Map();const memo=SYNM,acc=new Map();synCollect(root,memo,acc,true);const own=synOwn(root,memo),ct=certOf(root.id);
-  if(!acc.size&&!(ct&&ct.p>0))return'';let rows='';for(const [id,q] of acc){rows+=`<div class="mrow">${row(id,chip('×'+fmt(q),'cond'))}</div>${priceLine(id,q)}`;}
-  return`<section class="card" id="synbox"><h2 style="margin-top:0">合成成本</h2><p class="small muted" style="margin:0 0 8px">計晒成條合成路線要用嘅道具。中間嘅兵或者怪物如果拍賣所有證書賣，會同自己合比較，平啲嗰個用嚟計（卡上面會亮起）。打返嚟嘅怪物同已經填咗紅利嘅兵唔計錢。</p>
-   <div class="mcalc" data-fee="0">${rows||'<p class="muted">呢條路線唔使用道具。</p>'}</div>
+function synHtml(root){SYNM=new Map();SYNA={};const memo=SYNM,acc=new Map();synCollect(root,memo,acc,true);const ct=certOf(root.id);
+  if(!acc.size&&!(ct&&ct.p>0))return'';const A={raw:{},fee:0,sum:0,tools:new Set()};let rows='';for(const [id] of acc)synAuto(id);
+  const s0=MNC;MNC=SYNA;try{for(const [id,q] of acc)rows+=expand(id,q,1,A,SYNP);}finally{MNC=s0;}
+  rows=rows.replace(/<div class="bar" style="margin:2px 0 6px"><button type="button" class="btn" data-mnc="[^"]*">[^<]*<\/button><\/div>/g,'');
+  rows=rows?`<div class="mtree"><ul>${rows}</ul></div>`:'';const own=A.sum+A.fee;
+  return`<section class="card" id="synbox"><h2 style="margin-top:0">合成成本</h2><p class="small muted" style="margin:0 0 8px">計晒成條合成路線要用嘅道具。中間嘅兵或者怪物如果拍賣所有證書賣，會同自己合比較，平啲嗰個用嚟計（卡上面會亮起）。打返嚟嘅怪物同已經填咗紅利嘅兵唔計錢。道具可以製作嘅話，會比較「買」同「自己合」，自動揀平啲嗰個（亮起嘅就係揀咗嘅做法）。</p>
+   <div class="mcalc" data-fee="${A.fee}">${rows||'<p class="muted">呢條路線唔使用道具。</p>'}</div>
    <div class="mtot"><div><span>總成本</span><b id="m-total">${int(Math.round(own))}</b> 兩</div>${ct&&ct.p>0?`<div class="small"><span>直接買證書</span> <a href="#${esc(ct.id)}">${esc(nm(get(ct.id)))}</a> <span>${int(ct.p)} 兩</span>${ct.p<own?' <span>（更平）</span>':''}</div>`:''}</div></section>`;}
 function stagesHtml(root){
   const tree=(n,root_)=>{const kids=hasB(stOf(n.p))?[]:n.kids;
