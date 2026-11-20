@@ -342,10 +342,10 @@ function itemInfo(e){const L=(e.desc||'').split('\n');const txt=[],get_=[],kv=[]
   const only=q.only&&get('gu'+q.only);
   const body=(txt.length?`<p class="pre" style="margin:0">${esc(txt.join('\n'))}</p>`:'')+(st.length?`<div style="margin-top:${txt.length?12:0}px"><div class="flabel">能力</div><dl class="stats">${st.map(x=>`<div><dt>${esc(x[0])}</dt><dd>${esc(x[1])}</dd></div>`).join('')}</dl></div>`:'')
     +(only?`<p class="small" style="margin:10px 0 0">專用：<a href="#gu${esc(q.only)}">${esc(nm(only))}</a></p>`:'')
-    +(e.affix&&e.sock?`<p class="small" style="margin:10px 0 0">${e.sock===1?'開孔版本，冇額外能力；可以再入寶石。':`寶石加成 <b>${esc(e.affix.n)}</b>：${e.affix.st.map(([k,v])=>esc(k)+' +'+v).join('、')}，已經計埋喺上面能力。`}${N(e.rate)?` 成功率 ${N(e.rate)}%。`:''}</p>`:'')
+    +(e.affix&&e.sock?`<p class="small" style="margin:10px 0 0">${e.sock===1?'<span>開孔版本，冇額外能力；可以再入寶石。</span>':`寶石加成 <b>${esc(e.affix.n)}</b>：${e.affix.st.map(([k,v])=>esc(k)+' +'+v).join('、')}，已經計埋喺上面能力。`}${N(e.rate)?` <span>成功率 ${N(e.rate)}%。</span>`:''}</p>`:'')
     +(e.affix&&!e.sock?`<p class="small" style="margin:10px 0 0">詞綴 <b>${affLink(e.affix.n)}</b>（${e.affix.g} 級）：${e.affix.st.map(([k,v])=>esc(k)+' +'+v).join('、')}，已經計埋喺上面能力。${e.gsn?`磨練大成功會變成 ${affLink(e.gsn)}。`:''}<a href="#ench">咒術磨練（鬼道）›</a></p>`:'')
     +(e.wsk&&get(e.wsk)?(()=>{const w=get(e.wsk);return`<div style="margin-top:12px"><div class="flabel">武器技能（裝備咗就可以用）</div><div class="rows">${row(e.wsk,w.f?chip('可計傷害','hot'):'',[w.cost?`魔力 ${w.cost}`:'',w.range?`射程 ${w.range} 格`:''].filter(Boolean).join('｜'))}</div>${TXT(w.mdesc)||TXT(w.desc)?`<p class="pre small" style="margin:6px 0 0">${esc(TXT(w.mdesc)||TXT(w.desc))}</p>`:''}${tfHtml(w)}</div>`;})():'')
-    +(q.wt?`<p class="small" style="margin:10px 0 0">武器類型：${esc(q.wt)}（用${esc(q.wt)}嘅傭兵先裝得）</p>`:'')
+    +(q.wt?`<p class="small" style="margin:10px 0 0">武器類型：${esc(q.wt)}（<span>只有用呢類武器嘅傭兵先裝得</span>）</p>`:'')
     +(get_.length?`<div style="margin-top:12px"><div class="flabel">取得方法</div>${get_.map(x=>`<p class="pre small" style="margin:0 0 4px">${esc(x)}</p>`).join('')}</div>`:'');
   return section('說明',body);}
 const qty=(arr)=>(arr||[]).map(d=>`${nm(get(d.i||d[0]))}×${d.q||d[1]}`).join('、');
@@ -599,7 +599,7 @@ function vDetail(id,t,e){
     const mrow=([x,m])=>row(x,elChip(m.el)+(m.grade==='Boss'?chip('Boss','cond'):''),[m.exp?`經驗 ${int(m.exp)}`:'',(m.drops||[]).length?`掉落 ${(m.drops||[]).length} 種`:''].filter(Boolean).join('｜'));
     const mz=sorted('monsters').filter(([mid,m])=>!msS.has(mid)&&(m.az||[]).includes(id));
     b+=section(`呢度嘅怪物（${ms.length}）`,ms.length?rows(ms.map(mrow)):mz.length?'<p class="small muted" style="margin:0">怪物圖鑑冇逐層寫明，睇下面「同區怪物」。</p>':'<p class="small muted" style="margin:0">遊戲資料冇記錄呢度有怪物。</p>');
-    if(mz.length)b+=section(`同區怪物（${mz.length}）`,'<p class="small muted" style="margin:0 0 8px">怪物圖鑑只寫咗地區名（例如「'+esc(nm(get((mz[0][1].at||[])[0])||{}))+'」一帶），冇寫係邊層，所以呢度都可能有。</p>'+rows(mz.map(mrow)));
+    if(mz.length)b+=section(`同區怪物（${mz.length}）`,'<p class="small muted" style="margin:0 0 8px"><span>怪物圖鑑只寫咗地區名，冇寫係邊層，所以呢度都可能有。</span><span>例如：</span><span>'+esc(nm(get((mz[0][1].at||[])[0])||{}))+'</span></p>'+rows(mz.map(mrow)));
     {const kids=sorted('places').filter(([,p])=>p.parent===id).map(([x])=>x);const km=sorted('monsters').filter(([mid,m])=>!msS.has(mid)&&(m.at||[]).some(a=>kids.includes(a)));
      if(km.length)b+=section(`內部地點嘅怪物（${km.length}）`,rows(km.map(([x,m])=>row(x,elChip(m.el)+(m.grade==='Boss'?chip('Boss','cond'):''),(m.at||[]).filter(a=>kids.includes(a)).map(a=>nm(get(a))).join('、')))));
      const pm=new Map();sorted('combos').forEach(([,c])=>{if(!(c.lead&&msS.has(c.lead))&&c.at!==id)return;(c.mons||[]).forEach(m=>{if(!msS.has(m.i)&&get(m.i)&&!km.some(x=>x[0]===m.i))pm.set(m.i,c.lead);});});
@@ -752,7 +752,7 @@ function tfHtml(w){const t=w&&w.tf;if(!t)return'';const n=TXT(t.n)||t.n.ko||'';
   return`<div style="margin-top:10px"><div class="flabel">附身變身</div><p class="small" style="margin:0 0 6px">裝備之後入戰鬥會自動變身${n?'做<b>'+esc(n)+'</b>':''}，變身後可以用：</p>${rows((t.sk||[]).filter(get).map(k=>{const x=get(k);return row(k,x.f?chip('可計傷害','hot'):'',[x.cost?`魔力 ${x.cost}`:'',TXT(x.mdesc)||TXT(x.desc)].filter(Boolean).join('｜'));}))}</div>`;}
 function skillDetail(id,e){let b='';
   const d=TXT(e.mdesc)||TXT(e.desc);
-  if(e.alt)b+=`<p class="small muted" style="margin:0 0 8px">遊戲技能表入面叫「${esc(e.alt)}」，呢度用特性描述入面嘅叫法。</p>`;
+  if(e.alt)b+=`<p class="small muted" style="margin:0 0 8px"><span>遊戲技能表入面叫</span>「<span>${esc(e.alt)}</span>」<span>，呢度用特性描述入面嘅叫法。</span></p>`;
   if((e.via||[]).length)b+=`<p class="note" style="margin:0 0 10px">呢招要先用${e.via.filter(get).map(v=>`<a href="#${esc(v)}">${esc(nm(get(v)))}</a>`).join('／')}附身變身之後先用得。</p>`;
   b+=section('技能說明',(d?`<p class="pre" style="margin:0">${esc(d)}</p>`:'')+(e.mdesc&&e.desc&&TXT(e.desc)!==TXT(e.mdesc)?`<p class="pre small muted" style="margin:8px 0 0">${esc(TXT(e.desc))}</p>`:'')+statDl([['魔力消耗',e.cost],['射程',e.range?e.range+' 格':'']]).replace('<dl','<dl style="margin-top:10px"'));
   if(e.f)b+=section('傷害公式',`<p class="formula" style="margin:0">傷害 ＝ ${prettyF(e.f)}</p>${e.rate?`<p class="small muted" style="margin:6px 0 0">再乘魔法命中率 ÷ 70（命中率 70 時等於原數）。之後再按對方抗性同屬性計。</p>`:''}
@@ -1016,18 +1016,18 @@ function vCinta(){const L=SY().cinta||[];return`${crumb([['如意寶珠']])}<h1>
 function vGskill(){const L=SY().gskill||[];const cats=[...new Set(L.map(x=>x.cat))];const t=+(ui.gsc||cats[0]||1);
   return`${crumb([['商團技能']])}<h1>商團技能</h1><p class="lead">商團升級之後可以學嘅技能，有啲要先學前置技能。</p>
   ${tabsUI('gsc',cats.map(c=>[String(c),`第 ${c} 類`]),String(t))}
-  <section class="card"><div class="plist">${L.filter(x=>x.cat===t).map(x=>{const pre=L.find(y=>y.cat===x.cat&&y.n===x.pre);return`<div class="prow"><div class="pbody"><div class="phead"><span class="pname">${esc(nm(x))}</span><span class="chip">${x.pas?'被動':'主動'}</span><span class="chip hot">商團 Lv${x.plv}</span><span class="chip">最高 ${x.mx} 階</span></div>${pre?`<div class="small">要先學：${esc(nm(pre))}</div>`:''}${x.desc.length>1?`<div class="small muted pre">${esc(TXT(x.desc[x.desc.length-1]))}</div>`:x.desc[0]?`<div class="small muted pre">${esc(TXT(x.desc[0]))}</div>`:''}</div></div>`;}).join('')}</div></section>`;}
+  <section class="card"><div class="plist">${L.filter(x=>x.cat===t).map(x=>{const pre=L.find(y=>y.cat===x.cat&&y.n===x.pre);return`<div class="prow"><div class="pbody"><div class="phead"><span class="pname">${esc(nm(x))}</span><span class="chip">${x.pas?'被動':'主動'}</span><span class="chip hot">商團 Lv${x.plv}</span><span class="chip">最高 ${x.mx} 階</span></div>${pre?`<div class="small"><span>要先學</span>：<span>${esc(nm(pre))}</span></div>`:''}${x.desc.length>1?`<div class="small muted pre">${esc(TXT(x.desc[x.desc.length-1]))}</div>`:x.desc[0]?`<div class="small muted pre">${esc(TXT(x.desc[0]))}</div>`:''}</div></div>`;}).join('')}</div></section>`;}
 function vRand(){const R=SY().rand||{a:[],pt:[]};const tot=R.a.reduce((s,x)=>s+N(x.p),0);
   return`${crumb([['隨機能力']])}<h1>隨機能力（均衡碎片）</h1><p class="lead">用均衡碎片幫裝備加隨機能力。先隨機抽能力種類，再抽等級；等級越高數值越大，機率越低。</p>
   ${section('碎片點數',rows(R.pt.filter(([i])=>get(i)).map(([i,p])=>row(i,chip(p+' 點','hot')))))}
-  ${R.a.map(x=>{const gt=(x.gp||[]).reduce((s,v)=>s+v,0);return section(`${esc(x.k)}${tot&&x.p?`（抽中機率 ${fmt(x.p/tot*100)}%）`:''}`,`<div class="tw"><table class="dt"><tr><th class="r">等級</th><th class="r">數值</th><th class="r">費用</th><th class="r">機率</th></tr>${x.g.map(([g,m,a,b])=>`<tr><td class="r">${g}</td><td class="r">${a===b?a:a+'–'+b}</td><td class="r">${int(m)}</td><td class="r">${gt&&x.gp[g-1]!=null?fmt(x.gp[g-1]/gt*100)+'%':'–'}</td></tr>`).join('')}</table></div>`);}).join('')}`;}
+  ${R.a.map(x=>{const gt=(x.gp||[]).reduce((s,v)=>s+v,0);return section(`${esc(x.k)}${tot&&x.p?`（<span>抽中機率 ${fmt(x.p/tot*100)}%</span>）`:''}`,`<div class="tw"><table class="dt"><tr><th class="r">等級</th><th class="r">數值</th><th class="r">費用</th><th class="r">機率</th></tr>${x.g.map(([g,m,a,b])=>`<tr><td class="r">${g}</td><td class="r">${a===b?a:a+'–'+b}</td><td class="r">${int(m)}</td><td class="r">${gt&&x.gp[g-1]!=null?fmt(x.gp[g-1]/gt*100)+'%':'–'}</td></tr>`).join('')}</table></div>`);}).join('')}`;}
 
 function vSpirits(){const L=SY().spirits||[];const by=Object.fromEntries(L.map(x=>[x.c,x]));const GR=['','下級','中級','上級','最上級'];
   const isChild=new Set(L.map(x=>x.up).filter(Boolean));const roots=L.filter(x=>!isChild.has(x.c));
   const card=x=>`<div class="prow">${x.img?`<span class="pico">${icon(x,56)}</span>`:''}<div class="pbody"><div class="phead"><span class="pname">${esc(nm(x))}</span>${elChip(x.el)}${chip(GR[x.gr]||'')}</div><div class="small">${esc(TXT(x.sk))}</div>${x.up&&by[x.up]?`<div class="small muted">進化成 <b>${esc(nm(by[x.up]))}</b>：親密度 ${int(x.it)}</div>${matsHtml(x.m)}`:''}</div></div>`;
   const chain=r=>{const a=[];let c=r,g=0;while(c&&g++<6){a.push(c);c=by[c.up];}return a;};
   return`${crumb([['精靈']])}<h1>精靈</h1><p class="lead">精靈會跟主角出戰，提供輔助效果。每條線由下級進化到最上級，進化要親密度同材料。</p>
-  ${roots.map(r=>{const ch=chain(r);return section(`${esc(nm(r))} 系（${esc(r.el)}）`,`<div class="plist">${ch.map(card).join('')}</div>`);}).join('')}`;}
+  ${roots.map(r=>{const ch=chain(r);return section(`${esc(nm(r))}（${esc(r.el)}）`,`<div class="plist">${ch.map(card).join('')}</div>`);}).join('')}`;}
 function vMounts(){const S=SY();
   return`${crumb([['坐騎']])}<h1>坐騎</h1><p class="lead">坐騎提升野外移動速度，高級坐騎仲有能力加成。要先將騎術練到指定等級先騎得。</p>
   ${section(`坐騎一覽（${(S.mounts||[]).length}）`,`<div class="plist">${(S.mounts||[]).map(m=>`<div class="prow">${m.img?`<span class="pico">${icon(m,60)}</span>`:''}<div class="pbody"><div class="phead"><span class="pname">${esc(nm(m))}</span><span class="chip hot">騎術 Lv${m.need}</span><span class="chip">移動速度 ${m.spd}</span></div>${m.opt.length?`<dl class="stats">${m.opt.map(([k,v])=>`<div><dt>${esc(TXT(k))}</dt><dd>+${int(v)}</dd></div>`).join('')}</dl>`:''}${TXT(m.info)?`<div class="small pre">${esc(TXT(m.info))}</div>`:''}${TXT(m.get)?`<div class="small muted">取得：${esc(TXT(m.get))}</div>`:''}</div></div>`).join('')}</div>`)}
@@ -1431,7 +1431,7 @@ function vDamage(){const d=C.d;d.eq=d.eq||{};d.tr=d.tr||{};d.tm=d.tm||[];d.tt=d.
   <div class="grid2">${sel('dt','傷害類型',[['m','法術（睇法抗）'],['p','打擊（睇打抗）']])}${S&&S.rate?ci('d','rate','魔法命中率','70'):''}${ci('d','hits','一招打幾多 Hit','1')}${sel('hm','多 Hit 點計',[['each','公式係每 Hit 傷害'],['split','公式係總傷害，平分落每 Hit']])}</div></section>
  <section class="card" style="display:grid;gap:10px"><h2 style="margin:0">三、等級、紅利同裝備</h2>
   <div class="grid2">${ci('d','lv','等級','1','min="1" max="260"')}${ci('d','bon','紅利')}</div>
-  <div class="small muted">升級點數 ${R.pts-N(d.bon)} ＋ 紅利 ${N(d.bon)} ＝ <b>${R.pts}</b> 點，已分配 ${R.used}，<b id="d-left">剩 ${R.pts-R.used}</b></div>
+  <div class="small muted">升級點數 ${R.pts-N(d.bon)} ＋ 紅利 ${N(d.bon)} ＝ <b>${R.pts}</b> <span>點</span>，<span>已分配 ${R.used}</span>，<b id="d-left">剩 ${R.pts-R.used}</b></div>
   <div class="grid2">${ci('d','a_s','加落力量')}${ci('d','a_d','加落敏捷')}${ci('d','a_v','加落體力')}${ci('d','a_i','加落智力')}</div>
   <div class="bar">${[['s','力量'],['d','敏捷'],['v','體力'],['i','智力']].map(([k,l])=>`<button type="button" class="btn" data-dall="${k}">全部加${l}</button>`).join('')}</div>
   <div style="display:grid;gap:8px">${SLOTS.map(([k,l,g])=>{const it=get(d.eq[k]);return`<div class="exm" style="grid-template-columns:72px 1fr auto"><span class="small muted">${l}</span>${it?`<span>${icon(it,24)} ${esc(nm(it))}<span class="small muted" style="display:block">${esc(eqSum(it))}</span></span><button type="button" data-deq="${k}" aria-label="移除">✕</button>`:`<span>${pkUI('eq_'+k,'',sorted('items').filter(([,x])=>x.eq&&g.includes(x.eq.g)&&canUse(x,code)).sort((a,b)=>N(b[1].eq.lv)-N(a[1].eq.lv)),'搵'+l)}</span><span></span>`}</div>`;}).join('')}</div>
@@ -1589,7 +1589,7 @@ function vTeam(){const T=curTeam();
 
 function memberEditor(x,i){const m=get(x.id);x.eq=x.eq||{};x.a=x.a||{};const code=codeOf(x.id);const st=(m&&m.st)||{};const lv=Math.max(1,Math.min(260,N(x.lv)||250));const pts=accAt(lv)+N(x.bon);const used=['s','d','v','i'].reduce((a,k)=>a+N(x.a[k]),0);
   return`<div style="display:grid;gap:8px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)">
-   <div class="small muted">能力點：升級 ${accAt(lv)} ＋ 紅利 ${N(x.bon)} ＝ <b>${pts}</b>，已分配 ${used}，剩 <b>${pts-used}</b></div>
+   <div class="small muted">能力點：升級 ${accAt(lv)} ＋ 紅利 ${N(x.bon)} ＝ <b>${pts}</b>，<span>已分配 ${used}</span>，<span>剩</span> <b>${pts-used}</b></div>
    <div class="bins">${[['s','力量'],['d','敏捷'],['v','體力'],['i','智力']].map(([k,l])=>`<label class="bf"><span>加${l}</span><input type="number" min="0" data-tma="${i}.${k}" value="${esc(x.a[k]||'')}" placeholder="0"></label>`).join('')}</div>
    <div class="bar">${[['s','力量'],['d','敏捷'],['v','體力'],['i','智力']].map(([k,l])=>`<button type="button" class="btn" data-tmall="${i}.${k}">全部加${l}</button>`).join('')}</div>
    <div class="small muted">其他能力加成（如意寶珠、星宿、稱號、英靈村等）</div>
@@ -1654,10 +1654,10 @@ const STL2={mn:'最小攻擊',mx:'最大攻擊',mv:'移動速度',as:'攻擊速�
 const RST={0:'力量',1:'敏捷',2:'智力',3:'體力',4:'打擊抵抗',5:'法術抵抗',6:'屬性攻擊力'};
 const SUPG={1:'一般（武器）',2:'一般（防具）',3:'傳說將帥（武器）',4:'傳說將帥（防具）',5:'外型裝備'};
 function starHtml(id){const S=SY();const k=(S.starst||{})[id];if(!k)return'';const L=(S.stargrp||{})[k]||[];if(L.length<2)return'';
-  return section(`星宿石每級能力（${esc(k)}）`,`<div class="tw"><table class="dt"><tr><th class="r">強化</th><th>額外能力</th><th class="r">星痕</th></tr>${L.map(([lv,it,st])=>`<tr${it===id?' style="background:var(--sunk)"':''}><td class="r"><a href="#${esc(it)}">+${lv}</a></td><td>${Object.entries(st).filter(([q])=>q!=='cost').map(([q,v])=>`${STL2[q]||q} +${fmt(v)}`).join('、')||'<span class="muted">（睇道具說明）</span>'}</td><td class="r">${st.cost||'–'}</td></tr>`).join('')}</table></div><p class="small muted" style="margin:6px 0 0">遊戲檔 StarsItem 嘅額外能力；基本能力寫喺各級道具說明。</p>`);}
+  return section(`<span>星宿石每級能力</span>（<span>${esc(k)}</span>）`,`<div class="tw"><table class="dt"><tr><th class="r">強化</th><th>額外能力</th><th class="r">星痕</th></tr>${L.map(([lv,it,st])=>`<tr${it===id?' style="background:var(--sunk)"':''}><td class="r"><a href="#${esc(it)}">+${lv}</a></td><td>${Object.entries(st).filter(([q])=>q!=='cost').map(([q,v])=>`${STL2[q]||q} +${fmt(v)}`).join('、')||'<span class="muted">（睇道具說明）</span>'}</td><td class="r">${st.cost||'–'}</td></tr>`).join('')}</table></div><p class="small muted" style="margin:6px 0 0">遊戲檔 StarsItem 嘅額外能力；基本能力寫喺各級道具說明。</p>`);}
 function reinfHtml(id){const R=SY().reinf||{};const M=(R.mat||{})[id];const A=(R.add||{})[id];if(!M&&!A)return'';let h='';
   if(M)h+=M.map(([stg,ms,fee,fm,g])=>`<div class="prow"><div class="pbody"><div class="phead"><span class="pname">${M.length>1?'材料組 '+(stg+1):'每次強化'}</span>${fee?`<span class="chip">${int(fee)} 兩${fm?`（每級 +${fm}%）`:''}</span>`:''}${SUPG[g]?`<span class="chip">輔助劑：${esc(SUPG[g])}</span>`:''}</div><div class="pmats">${ms.map(([i,q,mu])=>{const x=get(i);return x?`<a href="#${esc(i)}" class="pmat">${icon(x,22)}<span>${esc(nm(x))}</span><b>×${q}${mu?`（每級 +${mu}%）`:''}</b></a>`:'';}).join('')}</div></div></div>`).join('');
-  if(A)h+=`<div class="small" style="margin-top:6px">${A.map(([lo,hi,a])=>`強化 +${lo}${hi!==lo?'～+'+hi:''}：解鎖額外效果 <code>${esc(a)}</code>`).join('<br>')}</div>`;
+  if(A)h+=`<div class="small" style="margin-top:6px">${A.map(([lo,hi,a])=>`強化 +${lo}${hi!==lo?'～+'+hi:''}：<span>解鎖額外效果</span> <code>${esc(a)}</code>`).join('<br>')}</div>`;
   return section('強化 +1～+10',h+'<p class="small muted" style="margin:6px 0 0"><a href="#upg" data-tab="upg" data-v="rn">睇成功率同能力倍數 ›</a>　「每級 +%」係遊戲檔寫嘅遞增倍數。</p>');}
 function vReinf(){const R=SY().reinf||{};const L=Object.keys(R.mat||{}).filter(get);
   return`<section class="card"><h2>成功率</h2><div class="tw"><table class="dt"><tr><th>類型</th><th>等級</th>${[1,2,3,4,5,6,7,8,9,10].map(n=>`<th class="r">+${n}</th>`).join('')}</tr>${(R.rate||[]).map(([pt,lo,hi,a])=>`<tr><td>${pt}</td><td>${lo}–${hi}</td>${a.map(v=>`<td class="r">${v?v+'%':'–'}</td>`).join('')}</tr>`).join('')}</table></div><p class="small muted">遊戲檔用數字 0–11 分裝備類型，冇寫明邊個係咩部位。</p></section>
@@ -1767,7 +1767,7 @@ function mercBond(id){const b=(SY().bond||[]).find(x=>x.m===id);return b?section
 
 /* ---------- 組合技 ---------- */
 function vCskill(){const L=SY().combo||[];return`${crumb([['組合技']])}<h1>組合技</h1><p class="lead">隊伍入面有指定嘅傭兵組合，主角就可以用組合技。部分組合技要主角係指定國籍。</p>
-  ${L.map(c=>section(c.n,`<div class="row" style="padding:0 0 8px">${icon(c,42)}<span class="nm" style="font-weight:400">${esc(c.desc)}</span></div><div class="small muted" style="margin-bottom:8px">冷卻 ${c.cd} 秒${c.dur?`・持續 ${c.dur} 秒`:''}</div><div class="plist">${c.sets.map(([nat,ms])=>`<div class="prow"><div class="pbody"><div class="phead"><span class="chip">${esc(nat==='不限'?'任何國籍':'主角國籍：'+nat)}</span></div><div class="chips">${ms.map(m=>`<a class="chip cbm" href="#${esc(m)}">${icon(get(m),26,'face')}${esc(nm(get(m)))}</a>`).join('<span class="muted"> ＋ </span>')}</div></div></div>`).join('')}</div>`)).join('')}`;}
+  ${L.map(c=>section(c.n,`<div class="row" style="padding:0 0 8px">${icon(c,42)}<span class="nm" style="font-weight:400">${esc(c.desc)}</span></div><div class="small muted" style="margin-bottom:8px">冷卻 ${c.cd} 秒${c.dur?`・持續 ${c.dur} 秒`:''}</div><div class="plist">${c.sets.map(([nat,ms])=>`<div class="prow"><div class="pbody"><div class="phead"><span class="chip">${nat==='不限'?'任何國籍':`<span>主角國籍</span>：<span>${esc(nat)}</span>`}</span></div><div class="chips">${ms.map(m=>`<a class="chip cbm" href="#${esc(m)}">${icon(get(m),26,'face')}${esc(nm(get(m)))}</a>`).join('<span class="muted"> ＋ </span>')}</div></div></div>`).join('')}</div>`)).join('')}`;}
 function mercCombo(id){const L=(SY().combo||[]).map(c=>[c,c.sets.filter(([,ms])=>ms.includes(id))]).filter(x=>x[1].length);if(!L.length)return'';
   return section('組合技',L.map(([c,ss])=>`<div class="prow"><div class="pbody"><div class="phead">${icon(c,32)}<a class="pname" href="#cskill">${esc(c.n)}</a></div><div class="small muted">${esc(c.desc)}</div>${ss.map(([nat,ms])=>`<div class="chips" style="margin-top:4px"><span class="chip">${esc(nat==='不限'?'任何國籍':nat)}</span>${ms.filter(m=>m!==id).map(m=>`<a class="chip cbm" href="#${esc(m)}">＋ ${icon(get(m),26,'face')}${esc(nm(get(m)))}</a>`).join('')}</div>`).join('')}</div></div>`).join(''));}
 /* ---------- 深淵 ---------- */
@@ -1783,7 +1783,7 @@ function vAbyss(){const A=SY().abyss||[];const bi=Math.min(A.length-1,N(ui.abb))
   <div style="margin-top:8px">${tabsUI('abl',lvs.map(l=>[String(l),'等級 '+l]),String(lv))}</div>
   ${section('每層獎勵',`<div class="plist">${B.st.filter(x=>x[0]===lv).map(([l,m,st,dr])=>`<div class="prow"><span class="pico rank">${st}</span><div class="pbody"><div class="phead"><span class="pname">第 ${st} 層</span><span class="chip">${MODE[m]||esc(m)}</span></div>${dr.length?`<div class="pmats">${dr.map(([i,q,p])=>{const x=get(i);return x?`<a href="#${esc(i)}" class="pmat">${icon(x,22)}<span>${esc(nm(x))}</span><b>×${q}　${p}%</b></a>`:'';}).join('')}</div>`:'<div class="small muted">冇額外獎勵</div>'}</div></div>`).join('')}</div>`)}
   <section class="card"><h2>深淵怪物能力</h2>${tabsUI('abm',modes.map(m=>[m,MODE[m]]),md)}
-   <p class="small muted">等級 ${lv}・${MODE[md]}：${mons.length} 隻。遊戲檔冇寫邊隻喺邊個明王嘅深淵，所以呢度列晒全部。</p>
+   <p class="small muted"><span>等級 ${lv}</span>・<span>${MODE[md]}</span>：<span>${mons.length} 隻。</span><span>遊戲檔冇寫邊隻喺邊個明王嘅深淵，所以呢度列晒全部。</span></p>
    <div class="tw"><table class="dt"><tr><th>怪物</th><th class="r">生命</th><th class="r">打抗</th><th class="r">法抗</th><th class="r">屬性值</th></tr>${mons.map(([id,x,a])=>`<tr><td><a href="#${esc(id)}">${icon(x,22,'face')||icon(x,22)} ${esc(nm(x))}</a></td><td class="r">${int(a[2])}</td><td class="r">${a[3]}%</td><td class="r">${a[4]}%</td><td class="r">${a[5]}</td></tr>`).join('')}</table></div></section>`;}
 /* ---------- 套裝 / 陣法 ---------- */
 let _iset=null;function itemSets(){if(_iset&&_iset.size)return _iset;_iset=new Map();for(const st of SY().sets||[])for(const i of st.items){if(!_iset.has(i))_iset.set(i,[]);_iset.get(i).push(st);}return _iset;}
@@ -1920,8 +1920,14 @@ document.querySelector('.lang').addEventListener('click',e=>{const b=e.target.cl
 /* ---------- 介面翻譯（英文／韓文） ---------- */
 let I18N=null,TRRE={};const CJKR=/[一-鿿]/;
 fetch('i18n.json',{cache:'no-cache'}).then(r=>r.json()).then(j=>{I18N=j;trAll();}).catch(()=>{});
-function trRe(l){if(TRRE[l])return TRRE[l];const ks=Object.keys(I18N[l]).filter(k=>k.length>=2&&k.length<=40&&!k.includes('#')).sort((a,b)=>b.length-a.length);
-  TRRE[l]=ks.length?new RegExp(ks.map(k=>k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|'),'g'):null;return TRRE[l];}
+let NMAP=null;function nmap(l){if(!NMAP){if(!(D.items&&D.items.size))return {};NMAP={en:{},ko:{}};for(const t of Object.keys(D))if(D[t] instanceof Map)for(const e of D[t].values())if(e&&e.zh&&CJKR.test(e.zh)){if(e.en&&!NMAP.en[e.zh])NMAP.en[e.zh]=e.en;if(e.ko&&!NMAP.ko[e.zh])NMAP.ko[e.zh]=e.ko;}}return NMAP[l]||{};}
+function trRe(l){if(TRRE[l])return TRRE[l];const T=new Map();const add=(k,v)=>{if(k.length<2||k.length>40||k.includes('#')||v==null||CJKR.test(v)&&l==='en')return;const c=k[0];if(!T.has(c))T.set(c,[]);T.get(c).push([k,v]);};
+  const N=nmap(l);for(const [k,v] of Object.entries(N))add(k,v);if(l==='en'&&I18N.eng)for(const [k,v] of Object.entries(I18N.eng))add(k,v);for(const [k,v] of Object.entries(I18N[l]))add(k,v);
+  for(const a of T.values())a.sort((x,y)=>y[0].length-x[0].length);if(NMAP)TRRE[l]=T;return T;}
+function trRep(t,l){const T=trRe(l);if(!T.size)return t;let o='',i=0,hit=0;const sp=l==='en';
+  while(i<t.length){const c=T.get(t[i]);let m=null;if(c)for(const kv of c)if(t.startsWith(kv[0],i)){m=kv;break;}
+   if(m){const v=m[1];o+=(sp&&o&&/[A-Za-z0-9)]$/.test(o)?' ':'')+v+(sp&&i+m[0].length<t.length&&/[一-鿿]/.test(t[i+m[0].length])?' ':'');i+=m[0].length;hit++;}else{o+=t[i];i++;}}
+  return hit?o:t;}
 const PUNC={en:[[/，/g,', '],[/。/g,'. '],[/：/g,': '],[/；/g,'; '],[/（/g,' ('],[/）/g,') '],[/、/g,', '],[/[「」『』]/g,'"'],[/！/g,'! '],[/？/g,'? '],[/｜/g,' | '],[/／/g,' / '],[/＋/g,'+'],[/＝/g,'='],[/－/g,'-'],[/～/g,'~']],
   ko:[[/\(火\)/g,'(불)'],[/\(水\)/g,'(물)'],[/\(風\)/g,'(바람)'],[/\(雷\)/g,'(번개)'],[/\(土\)/g,'(땅)'],[/\(明\)/g,'(명)'],[/\(暗\)/g,'(암)'],[/\(新\)/g,'(신)'],[/\(弱\)/g,'(약)'],[/\(強\)/g,'(강)'],[/，/g,', '],[/。/g,'. '],[/：/g,': '],[/；/g,'; '],[/（/g,' ('],[/）/g,') '],[/、/g,', '],[/[「」『』]/g,'"'],[/！/g,'! '],[/？/g,'? '],[/｜/g,' | '],[/／/g,' / '],[/＋/g,'+'],[/＝/g,'='],[/－/g,'-'],[/～/g,'~']]};
 function trSplit(t){
@@ -1930,12 +1936,12 @@ function trSplit(t){
   m=t.match(/^([\s\S]+?)（([^（）]+)）$/);if(m){const a=trText(m[1]).trim(),b=trText(m[2]).trim();if(a!==m[1].trim()||b!==m[2].trim())return a+' ('+b+')';}
   return null;}
 function trText(s){if(lang==='zh'||!I18N||!I18N[lang])return s;const D=I18N[lang],G=(lang==='en'&&I18N.eng)||{};const t=s.trim();if(!t||!CJKR.test(t))return s;
-  let o=D[t]??G[t];
-  if(o==null&&lang==='ko'&&/\([火水風雷土明暗新弱強]\)/.test(t)){let x=t;PUNC.ko.slice(0,10).forEach(([a,b])=>{x=x.replace(a,b);});if(x!==t){const r=trText(x);return s.replace(t,r===x?x:r.trim());}}
+  let o=D[t]??G[t]??nmap(lang)[t];
   if(o==null&&/\d/.test(t)){const ns=[];const k=t.replace(/\d[\d,\.]*/g,m=>{ns.push(m);return'#';});const v=D[k]??G[k];if(v!=null){let i=0;o=v.replace(/#/g,()=>ns[i++]??'#');}}
   if(o==null)o=trSplit(t);
+  if(o==null&&lang==='ko'&&/\([火水風雷土明暗新弱強]\)/.test(t)){let x=t;PUNC.ko.slice(0,10).forEach(([a,b])=>{x=x.replace(a,b);});if(x!==t){const r=trText(x);return s.replace(t,r===x?x:r.trim());}}
   if(o==null){const m1=t.match(/^[^\u4e00-\u9fff]*([\u4e00-\u9fff])[^\u4e00-\u9fff]*$/);if(m1&&(D[m1[1]]??G[m1[1]])!=null)o=t.replace(m1[1],' '+(D[m1[1]]??G[m1[1]])+' ');}
-  if(o==null){if(t.length>90)return s;const re=trRe(lang);if(!re)return s;o=t.replace(re,m=>D[m]);if(o===t||CJKR.test(o.replace(/[〇一二三四五六七八九]/g,'')))return s;}
+  if(o==null){if(t.length>200)return s;o=trRep(t,lang);if(o===t||CJKR.test(o.replace(/[〇一二三四五六七八九]/g,'')))return s;}
   if(!CJKR.test(o)||true){PUNC[lang].forEach(([a,b])=>{o=o.replace(a,b);});o=o.replace(/[ \t]{2,}/g,' ').replace(/[ \t]+([,.;:)!?])/g,'$1').replace(/\(\s+/g,'(').trim();}
   const lead=s.match(/^\s*/)[0],tail=s.match(/\s*$/)[0];return lead+o+tail;}
 const TRA=['placeholder','title','aria-label'];
