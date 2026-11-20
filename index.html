@@ -533,6 +533,9 @@ function vDetail(id,t,e){
   if(t==='items'){
     b+=itemInfo(e);
     b+=priceHist(id)+varHist(id);
+    {if(!ENCHB){ENCHB={};for(const [k,x] of D.items)if(x.base&&x.affix)(ENCHB[x.base]=ENCHB[x.base]||[]).push(k);}
+     const EL=(ENCHB[id]||[]).slice().sort((a,b)=>(get(a).affix.g-get(b).affix.g)||String(get(a).affix.n).localeCompare(get(b).affix.n));
+     if(EL.length)b+=section(`鬼道（咒術磨練）版本（${EL.length}）`,rows(EL.map(k=>{const x=get(k),m=mkt(k);return row(k,chip(x.affix.g+' 級','cond')+chip(x.affix.st.map(([a,v])=>a+' +'+v).join('、'))+(m?chip(int(m.p)+' 兩','hot'):''));})));}
     if((e.shape||[]).some(x=>x[1].length))b+=section('外型強化能力',`<div class="tw"><table class="dt"><tr><th class="r">強化</th><th>能力</th></tr>${e.shape.map(([lv,st])=>`<tr><td class="r">+${lv}</td><td>${st.map(([k,v])=>`${esc(k)} +${v}`).join('、')||'–'}</td></tr>`).join('')}</table></div>`);
     {const ss=itemSets().get(id);if(ss)b+=`<section class="card"><h2>套裝效果</h2><div style="display:grid;gap:8px">${ss.map(st=>setCard(st,true,id)).join('')}</div></section>`;}
     {const J=(SY().jewel||{})[id];if(J&&J.length){const KL={s:'力量',d:'敏捷',v:'體力',i:'智力',el:'屬性值',lel:'地屬性值',atk:'傷害 %',dr:'傷害減少 %',cp:'爆擊率 %',cd:'爆擊傷害 %'};
@@ -836,15 +839,19 @@ function loadMkt(){fetch('prices.json?v='+Date.now().toString(36).slice(0,-4)).t
   const T=d=>d>1e11?d:new Date(Math.floor(d/1e4),Math.floor(d/100)%100-1,d%100,12).getTime();const M={};MKT_WIN=x.win||30;
   for(const [k,v] of Object.entries(x.m)){if(v[1]==='N')continue;const H=((x.h||{})[k]||[]).map(a=>[T(a[0]),a[1],a[2]?S(a[2]):'拍賣所']);M[k]={p:v[0],src:S(v[1]),sv:'gl',ts:v[2]?T(v[2]):x.t,h:H.length?H:(v[1]==='N'?[]:[[v[2]?T(v[2]):x.t,v[0],S(v[1])]])};}
   MKV=Object.entries(x.v||{}).filter(([k,v])=>v&&Array.isArray(v.p)&&N(v.p[0])>0).map(([k,v])=>({k,ids:v.ids||[],zh:v.zh||'',p:N(v.p[0]),ts:v.p[2]?T(v.p[2]):x.t,h:(v.h||[]).map(a=>[T(a[0]),N(a[1])])}));
+  VARMAP=0;
   MKT=M;MKT_T=x.t;if(ui.mid||/^#gi/.test(location.hash))schedule();}).catch(()=>{});}
-let MKT_WIN=30,MKT_T=0,MKV=[];
+let MKT_WIN=30,MKT_T=0,MKV=[];let ENCHB=null;
 // 附魔／強化版（拍賣所名有 <前綴>）：prices.json 嘅 v，同原裝分開計；喺原裝道具頁同對應嘅附魔道具頁顯示
 function varHist(id){const e=get(id),bs=e&&e.base?String(e.base):'',zn=e?String(e.zh||''):'';
   const L=MKV.filter(v=>v.ids.includes(id)||(bs&&v.zh&&v.ids.includes(bs)&&zn.includes(v.zh))).sort((a,b)=>a.p-b.p);if(!L.length)return'';
   const dt=t=>new Date(t).toLocaleDateString('zh-HK');
   return section('國際服拍賣所附魔版價格（Auction）',`<p class="small muted" style="margin:0 0 6px">拍賣所名有 &lt;前綴&gt; 嘅附魔／強化版，同原裝分開計（過去 ${MKT_WIN} 日最低）</p><div class="tw"><table class="dt"><tr><th>拍賣所名</th><th class="r">最低</th><th>日期</th><th>每日最低</th></tr>${L.map(v=>`<tr><td>${esc(v.k)}${v.zh?` <span class="small muted">[${esc(v.zh)}]</span>`:''}</td><td class="r"><b>${int(v.p)} 兩</b></td><td>${dt(v.ts)}</td><td class="small muted">${v.h.slice(-7).map(a=>`${dt(a[0])}：${int(a[1])}`).join('、')}</td></tr>`).join('')}</table></div>`);}
 loadMkt();
-const mkt=id=>{const m=MKT[id];return m&&N(m.p)>0?m:null;};
+let VARMAP=0;function mapVar(){if(VARMAP||!MKV.length||!D.items||!D.items.size)return;VARMAP=1;
+  const nk=t=>String(t||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(),E2={};for(const [k,e] of D.items)if(e.affix&&e.en)E2[nk(e.en)]=E2[nk(e.en)]||k;
+  for(const v of MKV){const id=E2[nk(v.k)];if(id&&!MKT[id])MKT[id]={p:v.p,src:'拍賣所',sv:'gl',ts:v.ts,h:v.h.map(a=>[a[0],a[1],'拍賣所'])};}}
+const mkt=id=>{mapVar();const m=MKT[id];return m&&N(m.p)>0?m:null;};
 const basePrice=id=>{const e=get(id);const f=faceOf(e);if(f)return f;const m=e&&String(e.desc||'').match(/價格\s*([\d,]+)/);return m?N(m[1].replace(/,/g,'')):0;};
 const sellPrice=id=>faceOf(get(id))||Math.floor(basePrice(id)/3);
 const unitPrice=id=>{if(MPR[id]!==''&&MPR[id]!=null)return N(MPR[id]);const b=buySrc(id);return b?b.p:sellPrice(id);};
