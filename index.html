@@ -342,7 +342,8 @@ function itemInfo(e){const L=(e.desc||'').split('\n');const txt=[],get_=[],kv=[]
   const only=q.only&&get('gu'+q.only);
   const body=(txt.length?`<p class="pre" style="margin:0">${esc(txt.join('\n'))}</p>`:'')+(st.length?`<div style="margin-top:${txt.length?12:0}px"><div class="flabel">能力</div><dl class="stats">${st.map(x=>`<div><dt>${esc(x[0])}</dt><dd>${esc(x[1])}</dd></div>`).join('')}</dl></div>`:'')
     +(only?`<p class="small" style="margin:10px 0 0">專用：<a href="#gu${esc(q.only)}">${esc(nm(only))}</a></p>`:'')
-    +(e.affix?`<p class="small" style="margin:10px 0 0">詞綴 <b>${affLink(e.affix.n)}</b>（${e.affix.g} 級）：${e.affix.st.map(([k,v])=>esc(k)+' +'+v).join('、')}，已經計埋喺上面能力。${e.gsn?`磨練大成功會變成 ${affLink(e.gsn)}。`:''}<a href="#ench">咒術磨練（鬼道）›</a></p>`:'')
+    +(e.affix&&e.sock?`<p class="small" style="margin:10px 0 0">${e.sock===1?'開孔版本，冇額外能力；可以再入寶石。':`寶石加成 <b>${esc(e.affix.n)}</b>：${e.affix.st.map(([k,v])=>esc(k)+' +'+v).join('、')}，已經計埋喺上面能力。`}${N(e.rate)?` 成功率 ${N(e.rate)}%。`:''}</p>`:'')
+    +(e.affix&&!e.sock?`<p class="small" style="margin:10px 0 0">詞綴 <b>${affLink(e.affix.n)}</b>（${e.affix.g} 級）：${e.affix.st.map(([k,v])=>esc(k)+' +'+v).join('、')}，已經計埋喺上面能力。${e.gsn?`磨練大成功會變成 ${affLink(e.gsn)}。`:''}<a href="#ench">咒術磨練（鬼道）›</a></p>`:'')
     +(e.wsk&&get(e.wsk)?(()=>{const w=get(e.wsk);return`<div style="margin-top:12px"><div class="flabel">武器技能（裝備咗就可以用）</div><div class="rows">${row(e.wsk,w.f?chip('可計傷害','hot'):'',[w.cost?`魔力 ${w.cost}`:'',w.range?`射程 ${w.range} 格`:''].filter(Boolean).join('｜'))}</div>${TXT(w.mdesc)||TXT(w.desc)?`<p class="pre small" style="margin:6px 0 0">${esc(TXT(w.mdesc)||TXT(w.desc))}</p>`:''}${tfHtml(w)}</div>`;})():'')
     +(q.wt?`<p class="small" style="margin:10px 0 0">武器類型：${esc(q.wt)}（用${esc(q.wt)}嘅傭兵先裝得）</p>`:'')
     +(get_.length?`<div style="margin-top:12px"><div class="flabel">取得方法</div>${get_.map(x=>`<p class="pre small" style="margin:0 0 4px">${esc(x)}</p>`).join('')}</div>`:'');
@@ -533,8 +534,10 @@ function vDetail(id,t,e){
   if(t==='items'){
     b+=itemInfo(e);
     b+=priceHist(id)+varHist(id);
-    {if(!ENCHB){ENCHB={};for(const [k,x] of D.items)if(x.base&&x.affix)(ENCHB[x.base]=ENCHB[x.base]||[]).push(k);}
-     const EL=(ENCHB[id]||[]).slice().sort((a,b)=>(get(a).affix.g-get(b).affix.g)||String(get(a).affix.n).localeCompare(get(b).affix.n));
+    {if(!ENCHB){ENCHB={};for(const [k,x] of D.items)if(x.base&&x.affix){const g=x.sock?'s':'e';ENCHB[g+x.base]=ENCHB[g+x.base]||[];ENCHB[g+x.base].push(k);}}
+     const EL=(ENCHB['e'+id]||[]).slice().sort((a,b)=>(get(a).affix.g-get(b).affix.g)||String(get(a).affix.n).localeCompare(get(b).affix.n));
+     const SL=(ENCHB['s'+id]||[]).slice().sort((a,b)=>(get(a).sock-get(b).sock)||String(nm(get(a))).localeCompare(nm(get(b))));
+     if(SL.length)b+=section(`開孔／入石版本（${SL.length}）`,rows(SL.map(k=>{const x=get(k),m=mkt(k);return row(k,chip(x.sock===1?'開孔':'入石','cond')+(x.affix.st.length?chip(x.affix.st.map(([a,v])=>a+' +'+v).join('、')):'')+(m?chip(int(m.p)+' 兩','hot'):''));})));
      if(EL.length)b+=section(`鬼道（咒術磨練）版本（${EL.length}）`,rows(EL.map(k=>{const x=get(k),m=mkt(k);return row(k,chip(x.affix.g+' 級','cond')+chip(x.affix.st.map(([a,v])=>a+' +'+v).join('、'))+(m?chip(int(m.p)+' 兩','hot'):''));})));}
     if((e.shape||[]).some(x=>x[1].length))b+=section('外型強化能力',`<div class="tw"><table class="dt"><tr><th class="r">強化</th><th>能力</th></tr>${e.shape.map(([lv,st])=>`<tr><td class="r">+${lv}</td><td>${st.map(([k,v])=>`${esc(k)} +${v}`).join('、')||'–'}</td></tr>`).join('')}</table></div>`);
     {const ss=itemSets().get(id);if(ss)b+=`<section class="card"><h2>套裝效果</h2><div style="display:grid;gap:8px">${ss.map(st=>setCard(st,true,id)).join('')}</div></section>`;}
