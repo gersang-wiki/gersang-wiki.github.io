@@ -49,6 +49,9 @@ for r in rows:
     if eq: e['eq'] = eq
     sec = 'gi' + r[9].strip()
     e['recipe'] = [{'i': b, 'q': '1'}] + ([{'i': sec, 'q': '1'}] if sec in I else [])
+    # 咒術磨練 also consumes the secret's own materials (e.g. 赤色精氣石, 勇者的證明)
+    if sec in I and (I[sec].get('eb') or {}).get('m'):
+        e['recipe'] += [{'i': m, 'q': str(q)} for m, q in I[sec]['eb']['m']]
     gs = 'gi' + r[13].strip()
     if r[13].strip() not in ('', '0') and gs != b and gs != k: e['gs'] = gs
     if old: old.update({x: y for x, y in e.items() if x not in ('img',) or 'img' not in old}); upd += 1
