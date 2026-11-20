@@ -45,14 +45,14 @@ def page(k, title, names, desc, body, crumb):
     url = f'{SITE}/{OUT}/{k}.html'
     meta = re.sub(r'\s+', ' ', desc)[:155]
     return f'''<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{E(title)}｜巨商全能百科</title><meta name="description" content="{E(meta)}"><link rel="canonical" href="{url}">
-<meta property="og:title" content="{E(title)}｜巨商全能百科"><meta property="og:description" content="{E(meta)}"><meta property="og:url" content="{url}">
+<title>{E(title)}｜巨商百科</title><meta name="description" content="{E(meta)}"><link rel="canonical" href="{url}">
+<meta property="og:title" content="{E(title)}｜巨商百科"><meta property="og:description" content="{E(meta)}"><meta property="og:url" content="{url}">
 <link rel="stylesheet" href="s.css"></head><body>
-<nav><a href="/">巨商全能百科</a> › {crumb}</nav>
+<nav><a href="/">巨商百科</a> › {crumb}</nav>
 <h1>{E(title)}</h1><p class="names">{E(names)}</p>
-<a class="open" href="/#{k}">喺巨商全能百科打開完整資料 →</a>
+<a class="open" href="/#{k}">喺巨商百科打開完整資料 →</a>
 {body}
-<footer>巨商（Gersang）全能百科：道具、傭兵、怪物、地圖、任務、合成材料同成本計算。資料來源：《巨商》遊戲資料檔。<br><a href="/">首頁</a> ・ {' ・ '.join(f'<a href="{t}.html">{n}</a>' for t, n in TYPES.items())}</footer>
+<footer>巨商（Gersang）百科：道具、傭兵、怪物、地圖、任務、合成材料同成本計算。資料來源：《巨商》遊戲資料檔。<br><a href="/">首頁</a> ・ {' ・ '.join(f'<a href="{t}.html">{n}</a>' for t, n in TYPES.items())}</footer>
 </body></html>'''
 
 def sec(title, inner): return f'<section><h2>{E(title)}</h2>{inner}</section>' if inner else ''
@@ -140,7 +140,7 @@ for t, label in TYPES.items():
         if not (e.get('zh') or e.get('en')): continue
         open(f'{OUT}/{k}.html', 'w', encoding='utf-8').write(build(k, t, e))
         urls.append(f'{SITE}/{OUT}/{k}.html'); lis.append(link(k))
-    idx = page(t, f'{label}一覽', f'全部 {len(lis)} 個{label}', f'巨商全能百科：全部 {len(lis)} 個{label}一覽。', sec(label, ul(lis, 100000)), f'<a href="{t}.html">{label}</a>')
+    idx = page(t, f'{label}一覽', f'全部 {len(lis)} 個{label}', f'巨商百科：全部 {len(lis)} 個{label}一覽。', sec(label, ul(lis, 100000)), f'<a href="{t}.html">{label}</a>')
     idx = idx.replace(f'<a class="open" href="/#{t}">', f'<a class="open" href="/#{ {"items":"items","mercs":"mercs","monsters":"monsters","places":"places","npcs":"npcs","quests":"quests","skills":"skills"}[t]}">')
     open(f'{OUT}/{t}.html', 'w', encoding='utf-8').write(idx); urls.append(f'{SITE}/{OUT}/{t}.html')
 today = datetime.date.today().isoformat()
