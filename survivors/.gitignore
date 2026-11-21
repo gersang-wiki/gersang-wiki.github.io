@@ -1,0 +1,5 @@
+# 本機素材包：只喺你自己部電腦用，永不上傳
+assets-local/*
+!assets-local/README.md
+!assets-local/sprites.example.json
+.DS_Store

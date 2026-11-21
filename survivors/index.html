@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>巨商 Survivors — Gersang Survivors</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #111; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; color: #f2ead8; touch-action: none; }
+  canvas { display: block; image-rendering: pixelated; }
+  #overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(10,8,5,0.55); }
+  .panel { background: #2a2015; border: 3px solid #b08a40; box-shadow: 0 0 0 3px #1a120a, 0 12px 40px rgba(0,0,0,.6); padding: 22px 26px; max-width: 720px; width: calc(100% - 40px); max-height: calc(100% - 40px); overflow: auto; text-align: center; border-radius: 6px; }
+  .panel.wide { max-width: 900px; }
+  h1 { font-size: 44px; margin: 0; color: #ffd84a; text-shadow: 3px 3px 0 #6a2a10; letter-spacing: 4px; }
+  h2 { margin: 0 0 12px; color: #ffd84a; }
+  .sub { margin: 4px 0 14px; letter-spacing: 6px; color: #c8a060; }
+  .story { line-height: 1.7; margin: 0 0 18px; }
+  .muted { color: #a89878; font-size: 13px; line-height: 1.6; }
+  .gold { color: #ffd84a; }
+  .btn { display: block; margin: 10px auto 0; min-width: 200px; padding: 12px 18px; font-size: 18px; font-weight: bold; background: #8a2a1a; color: #fff; border: 2px solid #e0b060; border-radius: 4px; cursor: pointer; font-family: inherit; }
+  .btn:hover { background: #a83a22; }
+  .btn.small { font-size: 14px; padding: 8px 14px; background: #4a3a22; }
+  .cards { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 8px 0; }
+  .shopgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; margin: 8px 0; }
+  .card { position: relative; flex: 1 1 180px; max-width: 220px; min-height: 130px; background: #3a2c1a; border: 2px solid #7a6030; border-radius: 6px; color: #f2ead8; padding: 12px 10px; cursor: pointer; font-family: inherit; text-align: center; }
+  .shopgrid .card { max-width: none; min-height: 110px; }
+  .card:hover:not([disabled]) { border-color: #ffd84a; transform: translateY(-2px); }
+  .card[disabled] { opacity: .45; cursor: default; }
+  .card .key { position: absolute; top: 6px; left: 8px; font-size: 12px; color: #a89878; }
+  .card .ct { font-size: 18px; font-weight: bold; margin-bottom: 4px; }
+  .card .cs { font-size: 13px; color: #ffd84a; margin-bottom: 6px; }
+  .card .cd { font-size: 13px; color: #d8ccb0; }
+  .card.job { border-color: #5ab0e0; background: #1f3240; }
+  .card.fuse { border-color: #ff9a3a; background: #40220f; }
+  .card.recruit { border-color: #6ab05a; }
+  .roster { margin: 8px auto; border-collapse: collapse; font-size: 14px; }
+  .roster td { padding: 2px 10px; text-align: left; }
+  .camp { max-width: 980px; text-align: left; }
+  .camphead { display: flex; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .camphead > div:nth-child(2) { flex: 1; font-size: 18px; }
+  .tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 2px solid #7a6030; margin-bottom: 10px; }
+  .tab { background: #3a2c1a; color: #d8ccb0; border: 1px solid #7a6030; border-bottom: none; padding: 8px 14px; cursor: pointer; font-family: inherit; font-size: 15px; border-radius: 4px 4px 0 0; }
+  .tab.on { background: #8a2a1a; color: #fff; }
+  h3 { color: #ffd84a; margin: 14px 0 6px; } h4 { color: #e0b060; margin: 12px 0 4px; }
+  .pt { width: 48px; height: 66px; object-fit: contain; image-rendering: pixelated; }
+  .pt.sm { width: 28px; height: 38px; }
+  .picks { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pick { display: flex; align-items: center; gap: 6px; padding: 4px 10px; border: 2px solid #5a4828; border-radius: 4px; cursor: pointer; background: #2f2418; }
+  .pick.on { border-color: #ffd84a; background: #4a3a1a; }
+  .zones { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+  .zone { text-align: left; background: #3a2c1a; border: 2px solid #7a6030; color: #f2ead8; padding: 10px; border-radius: 6px; cursor: pointer; font-family: inherit; }
+  .zone.done { border-color: #5a9a4a; } .zone[disabled] { opacity: .4; cursor: default; }
+  .zone .ct { font-weight: bold; font-size: 16px; } .zone .cd { font-size: 12px; color: #c8bca0; margin: 4px 0; } .zone .cs { font-size: 12px; color: #ff9a80; }
+  .mercgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 6px; }
+  .unit { background: #2f2418; border: 2px solid #5a4828; border-radius: 6px; padding: 6px; text-align: center; cursor: pointer; }
+  .unit:hover { border-color: #ffd84a; } .unit.legend { border-color: #ff9a3a; }
+  .unit .un { font-weight: bold; font-size: 13px; } .unit .ul, .unit .us { font-size: 12px; color: #c8bca0; }
+  .unit .btn { min-width: 0; width: 100%; margin-top: 6px; }
+  .detail { margin-top: 12px; padding: 12px; border: 2px solid #7a6030; border-radius: 6px; background: #241a10; }
+  .dhead { display: flex; gap: 12px; align-items: center; } .dhead h3 { margin: 0; } .dhead .pt { width: 72px; height: 99px; }
+  .bar { height: 6px; background: #102030; width: 220px; margin: 4px 0; } .bar i { display: block; height: 100%; background: #40a0ff; }
+  .stats { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 6px 0; }
+  .sk { margin: 3px 0; font-size: 14px; }
+  .slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .slot { background: #3a2c1a; border: 1px solid #7a6030; color: #f2ead8; padding: 6px; font-family: inherit; font-size: 12px; cursor: pointer; border-radius: 4px; min-height: 44px; }
+  .slot.on { border-color: #ffd84a; }
+  .picklist { margin: 6px 0; display: flex; flex-wrap: wrap; gap: 4px; }
+  .chip { display: inline-block; background: #3a2c1a; border: 1px solid #7a6030; color: #f2ead8; padding: 2px 8px; margin: 2px; border-radius: 10px; font-size: 12px; font-family: inherit; cursor: pointer; }
+  .chip.ok { border-color: #6ab05a; } .chip.no { border-color: #b05a4a; color: #e0a090; } .chip.lock { opacity: .5; } .chip.gold { color: #ffd84a; border-color: #ffd84a; }
+  .chip[disabled] { opacity: .4; cursor: default; }
+  .job, .recipe { display: flex; gap: 10px; align-items: center; padding: 8px; border: 1px solid #5a4828; border-radius: 6px; margin: 6px 0; }
+  .job > div, .recipe > div { flex: 1; } .job .btn, .recipe .btn { min-width: 80px; margin: 0; }
+  .recipe.locked { opacity: .6; }
+  .mlist { display: flex; flex-direction: column; gap: 2px; }
+  .mrow { display: grid; grid-template-columns: 1.4fr 2fr .6fr auto; gap: 8px; align-items: center; padding: 3px 6px; border-bottom: 1px solid #3a2c1a; font-size: 14px; }
+  .small { font-size: 11px; }
+  .card.hero .pt { width: 72px; height: 99px; }
+  .btn[disabled] { opacity: .45; cursor: default; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="overlay"></div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
