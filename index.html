@@ -1332,7 +1332,7 @@ function calcBonus(){const b=C.b;
   saveC();}
 const canBrk=e=>!!e&&(e.cat==='傳說將帥'||e.cat==='四天王');
 function runOpt(mode){if(!BT)return;const msg=$('#o-bopt');
-  if(mode==='clr'){const keep={};C.b.n=keep;render();return;}
+  if(mode==='clr'){const N0=BN(),r=BT.p;for(const k of Object.keys(N0))if(k===r||k.startsWith(r+'>'))delete N0[k];saveC();render();return;}
   if(mode==='brk'){BNODES.forEach(n=>{stOf(n.p).brk=true;});saveC();render();return;}
   if(mode==='min'){BNODES.forEach(n=>{const s=stOf(n.p);if(!hasB(s)){s.L=n.minL;if(n.r.t==='statue')s.s=Array(n.r.n).fill(100);}});render();return;}
   msg.textContent='計緊…';
