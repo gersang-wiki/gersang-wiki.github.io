@@ -1816,16 +1816,19 @@ function vSets(){const L=SY().sets||[];const q=(ui.sq||'').trim().toLowerCase();
   ${tabsUI('sty',[['','全部（'+L.length+'）'],['0','一般套裝'],['2','將帥套裝']],ty)}
   <label class="f">搜尋<input type="search" id="sq" value="${esc(ui.sq||'')}" placeholder="例：朱雀、貂蟬、法術抵抗"></label>
   ${setCmpHtml(L)}<p class="small muted">${R.length} 套・撳「加入比較」揀 2 套或以上嚟比較</p><div style="display:grid;gap:10px">${R.map(st=>`<div>${setCard(st,false)}<div class="bar" style="margin:4px 0 0"><button type="button" class="btn small" data-scmp="${esc(st.id)}">${SCMP.includes(st.id)?'✓ 已加入比較':'＋ 加入比較'}</button></div></div>`).join('')||'<p class="muted">搵唔到。</p>'}</div>`;}
-function cheapest(id,path=[],memo={}){if(id in memo)return memo[id];const u=unitPrice(id);let best=u>0?u:NaN;const r=path.length<6&&!path.includes(id)?recipeFor(id):null;
-  if(r&&r.m.length){let c=N(r.fee);for(const [m,q] of r.m){const v=cheapest(m,[...path,id],memo);if(!isFinite(v)){c=NaN;break;}c+=q*v;}c/=r.y||1;if(isFinite(c)&&!(c>=best))best=c;}
-  return memo[id]=best;}
-function formCostHtml(bookId,lvs){const memo={};const pr=i=>cheapest(i,[],memo);
-  const bk=bookId&&get(bookId);let bc=NaN;if(bk){const r=recipeFor(bookId);if(r&&r.m.length){let c=N(r.fee);for(const [m,q] of r.m)c+=q*pr(m);bc=c/(r.y||1);}else if(!/不可交易/.test(bk.zh||'')){const u=unitPrice(bookId);bc=u>0?u:NaN;}}let miss=[];const ups=lvs.filter(L=>L.m.length||L.fee);let cum=isFinite(bc)?bc:0;
-  const rows=ups.map(L=>{let mc=0;L.m.forEach(([i,q])=>{const v=pr(i);if(isFinite(v))mc+=q*v;else if(!miss.includes(i))miss.push(i);});const sub=mc+N(L.fee);cum+=sub;return`<tr><td class="r">Lv ${L.l} → ${L.l+1}</td><td class="r">${int(Math.round(mc))}</td><td class="r">${int(N(L.fee))}</td><td class="r">${int(Math.round(sub))}</td><td class="r"><b>${int(Math.round(cum))}</b></td></tr>`;}).join('');
-  const top=ups.length?ups[ups.length-1].l+1:1;
-  return section('成本計算',`<div class="tw"><table class="dt"><tr><th class="r">升級</th><th class="r">材料（兩）</th><th class="r">手續費（兩）</th><th class="r">小計（兩）</th><th class="r">累計（兩）</th></tr><tr><td class="r">陣法書</td><td class="r">${isFinite(bc)?int(Math.round(bc)):'–'}</td><td class="r">–</td><td class="r">${isFinite(bc)?int(Math.round(bc)):'–'}</td><td class="r"><b>${int(Math.round(isFinite(bc)?bc:0))}</b></td></tr>${rows}</table></div>
-  <p class="small" style="margin:8px 0 0"><span>由零做到 Lv ${top} 總成本</span>：<b>${int(Math.round(cum))}</b> <span>兩</span></p>
-  <p class="small muted" style="margin:4px 0 0">材料用拍賣所 30 日最低價、城鎮買入價，或者自己合（揀平嗰個，同材料計算一樣）。${bk&&!isFinite(bc)?'<span>陣法書冇價錢（可能係任務送或者唔可以交易），冇計入去。</span>':''}</p>${miss.length?`<p class="small muted" style="margin:4px 0 0"><span>以下材料冇價錢，冇計入去：</span>${miss.map(i=>get(i)?`<a href="#${esc(i)}">${esc(nm(get(i)))}</a>`:'').join('、')}</p>`:''}`);}
+function formCostHtml(bookId,lvs){SYNA={};const A={raw:{},fee:0,sum:0,tools:new Set()};const s0=MNC;MNC=SYNA;let tree='',bookNote='';
+  const strip=h=>h.replace(/<div class="bar" style="margin:2px 0 6px"><button type="button" class="btn" data-mnc="[^"]*">[^<]*<\/button><\/div>/g,'');
+  const tot=()=>A.sum+A.fee;
+  try{const bk=bookId&&get(bookId);
+    if(bk){const r=recipeFor(bookId);if((r&&r.m.length)||!/不可交易/.test(bk.zh||'')){synAuto(bookId);const b0=tot();const h=expand(bookId,1,0,A,SYNP);tree+=`<li><b>陣法書</b> ${chip('小計 '+int(Math.round(tot()-b0))+' 兩')}<ul>${h}</ul></li>`;}
+      else{tree+=`<li><b>陣法書</b><ul><li>${row(bookId,chip('唔可以交易，冇計錢'))}</li></ul></li>`;}}
+    for(const L of lvs.filter(L=>L.m.length||L.fee)){const b0=tot();const inner=L.m.map(([i,q])=>{synAuto(i);return expand(i,q,1,A,SYNP);}).join('');A.fee+=N(L.fee);
+      tree+=`<li><b>Lv ${L.l} → ${L.l+1}</b> ${L.fee?chip('手續費 '+int(L.fee)+' 兩'):''}${chip('小計 '+int(Math.round(tot()-b0))+' 兩')}${chip('累計 '+int(Math.round(tot()))+' 兩','cond')}${inner?`<ul>${inner}</ul>`:''}</li>`;}
+  }finally{MNC=s0;}
+  const top=(lvs.filter(L=>L.m.length||L.fee).slice(-1)[0]||{l:0}).l+1;const miss=Object.keys(A.raw).filter(k=>!unitPrice(k));
+  return`<section class="card" id="synbox"><h2 style="margin-top:0">合成同升級成本</h2><p class="small muted" style="margin:0 0 8px">由合成陣法書開始，逐級列出升級要嘅道具同手續費。道具可以製作嘅話，會比較「買」同「自己合」，自動揀平啲嗰個（亮起嘅就係揀咗嘅做法）。每樣材料下面可以改做自己嘅單價。</p>
+   <div class="mcalc" data-fee="${A.fee}"><div class="mtree"><ul>${strip(tree)}</ul></div></div>
+   <div class="mtot"><div><span>由零做到 Lv ${top} 總成本</span> <b id="m-total">${int(Math.round(tot()))}</b> 兩</div>${A.fee?`<div class="small muted"><span>當中手續費</span> ${int(A.fee)} 兩</div>`:''}${miss.length?`<div class="small muted"><span>以下材料冇價錢，冇計入去：</span>${miss.map(i=>get(i)?`<a href="#${esc(i)}">${esc(nm(get(i)))}</a>`:'').join('、')}</div>`:''}</div></section>`;}
 function vDisp(S,di){const x=(S.disp||[])[di];const F=S.form||[];const tabs=tabsUI('fmi',[...F.map((y,i)=>[String(i),y.n]),...(S.disp||[]).map((y,i)=>['d'+i,y.n])],'d'+di);if(!x)return'';const need=x.need&&get(x.need);const book=x.book&&get(x.book);
   return`${crumb([['陣法']])}<h1>陣法</h1><p class="lead">戰鬥陣型：學咗陣法書之後，傭兵按位置排，全隊有額外能力，用材料可以升級。</p>${tabs}
   <section class="card"><h2>${esc(x.n)}</h2><p class="pre" style="margin:0 0 8px">${esc(x.desc)}</p>${need?`<div class="row" style="padding:0">${icon(need,36,'face')}<span class="nm">要擁有：<a href="#${esc(x.need)}">${esc(nm(need))}</a></span></div>`:''}${book?`<div class="small" style="margin-top:6px">陣法書：<a href="#${esc(x.book)}">${icon(book,22)} ${esc(nm(book))}</a></div>`:''}</section>
