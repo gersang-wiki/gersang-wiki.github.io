@@ -1817,7 +1817,13 @@ function vSets(){const L=SY().sets||[];const q=(ui.sq||'').trim().toLowerCase();
   ${tabsUI('sty',[['','全部（'+L.length+'）'],['0','一般套裝'],['2','將帥套裝']],ty)}
   <label class="f">搜尋<input type="search" id="sq" value="${esc(ui.sq||'')}" placeholder="例：朱雀、貂蟬、法術抵抗"></label>
   ${setCmpHtml(L)}<p class="small muted">${R.length} 套・撳「加入比較」揀 2 套或以上嚟比較</p><div style="display:grid;gap:10px">${R.map(st=>`<div>${setCard(st,false)}<div class="bar" style="margin:4px 0 0"><button type="button" class="btn small" data-scmp="${esc(st.id)}">${SCMP.includes(st.id)?'✓ 已加入比較':'＋ 加入比較'}</button></div></div>`).join('')||'<p class="muted">搵唔到。</p>'}</div>`;}
-function formCostHtml(bookId,lvs){SYNA={};const A={raw:{},fee:0,sum:0,tools:new Set()};const s0=MNC;MNC=SYNA;let tree='',bookNote='';
+function formCostHtml(bookId,lvs){const UP=lvs.filter(L=>L.m.length||L.fee);const maxL=UP.length?UP[UP.length-1].l+1:1;const hasBook=!!bookId;
+  if(ui.fck!==(bookId||'')+lvs.length){ui.fck=(bookId||'')+lvs.length;ui.fcf='';ui.fct='';}
+  let fr=ui.fcf==null||ui.fcf===''?0:N(ui.fcf),to=N(ui.fct)||maxL;fr=Math.max(0,Math.min(maxL,fr));to=Math.max(Math.max(1,fr),Math.min(maxL,to));
+  const opt=(v,lab,sel)=>`<option value="${v}"${v===sel?' selected':''}>${lab}</option>`;
+  const pick=`<div class="bar" style="margin:0 0 10px;align-items:center;gap:8px"><label class="small">由<select data-fcr="fcf">${opt(0,hasBook?'未有（合成陣法書）':'Lv 0',fr)}${Array.from({length:maxL},(_,i)=>opt(i+1,'Lv '+(i+1),fr)).join('')}</select></label><label class="small">升到<select data-fcr="fct">${Array.from({length:maxL},(_,i)=>i+1).filter(v=>v>=Math.max(1,fr)).map(v=>opt(v,'Lv '+v,to)).join('')}</select></label></div>`;
+  lvs=UP.filter(L=>L.l>=Math.max(1,fr)&&L.l<to);if(fr>0)bookId=null;
+  SYNA={};const A={raw:{},fee:0,sum:0,tools:new Set()};const s0=MNC;MNC=SYNA;let tree='',bookNote='';
   const strip=h=>h.replace(/<div class="bar" style="margin:2px 0 6px"><button type="button" class="btn" data-mnc="[^"]*">[^<]*<\/button><\/div>/g,'');
   const tot=()=>A.sum+A.fee;
   try{const bk=bookId&&get(bookId);
@@ -1826,10 +1832,10 @@ function formCostHtml(bookId,lvs){SYNA={};const A={raw:{},fee:0,sum:0,tools:new 
     for(const L of lvs.filter(L=>L.m.length||L.fee)){const b0=tot();const inner=L.m.map(([i,q])=>{synAuto(i);return expand(i,q,1,A,SYNP);}).join('');A.fee+=N(L.fee);
       tree+=`<li><b>Lv ${L.l} → ${L.l+1}</b> ${L.fee?chip('手續費 '+int(L.fee)+' 兩'):''}${chip('小計 '+int(Math.round(tot()-b0))+' 兩')}${chip('累計 '+int(Math.round(tot()))+' 兩','cond')}${inner?`<ul>${inner}</ul>`:''}</li>`;}
   }finally{MNC=s0;}
-  const top=(lvs.filter(L=>L.m.length||L.fee).slice(-1)[0]||{l:0}).l+1;const miss=Object.keys(A.raw).filter(k=>!unitPrice(k));
-  return`<section class="card" id="synbox"><h2 style="margin-top:0">合成同升級成本</h2><p class="small muted" style="margin:0 0 8px">由合成陣法書開始，逐級列出升級要嘅道具同手續費。道具可以製作嘅話，會比較「買」同「自己合」，自動揀平啲嗰個（亮起嘅就係揀咗嘅做法）。每樣材料下面可以改做自己嘅單價。</p>
+  const top=to;const miss=Object.keys(A.raw).filter(k=>!unitPrice(k));
+  return`<section class="card" id="synbox"><h2 style="margin-top:0">合成同升級成本</h2><p class="small muted" style="margin:0 0 8px">由合成陣法書開始，逐級列出升級要嘅道具同手續費。道具可以製作嘅話，會比較「買」同「自己合」，自動揀平啲嗰個（亮起嘅就係揀咗嘅做法）。每樣材料下面可以改做自己嘅單價。</p>${pick}
    <div class="mcalc" data-fee="${A.fee}"><div class="mtree"><ul>${strip(tree)}</ul></div></div>
-   <div class="mtot"><div><span>由零做到 Lv ${top} 總成本</span> <b id="m-total">${int(Math.round(tot()))}</b> 兩</div>${A.fee?`<div class="small muted"><span>當中手續費</span> ${int(A.fee)} 兩</div>`:''}${miss.length?`<div class="small muted"><span>以下材料冇價錢，冇計入去：</span>${miss.map(i=>get(i)?`<a href="#${esc(i)}">${esc(nm(get(i)))}</a>`:'').join('、')}</div>`:''}</div></section>`;}
+   <div class="mtot"><div><span>${fr?`由 Lv ${fr} 升到 Lv ${top} 總成本`:`由零做到 Lv ${top} 總成本`}</span> <b id="m-total">${int(Math.round(tot()))}</b> 兩</div>${A.fee?`<div class="small muted"><span>當中手續費</span> ${int(A.fee)} 兩</div>`:''}${miss.length?`<div class="small muted"><span>以下材料冇價錢，冇計入去：</span>${miss.map(i=>get(i)?`<a href="#${esc(i)}">${esc(nm(get(i)))}</a>`:'').join('、')}</div>`:''}</div></section>`;}
 function vDisp(S,di){const x=(S.disp||[])[di];const F=S.form||[];const tabs=tabsUI('fmi',[...F.map((y,i)=>[String(i),y.n]),...(S.disp||[]).map((y,i)=>['d'+i,y.n])],'d'+di);if(!x)return'';const need=x.need&&get(x.need);const book=x.book&&get(x.book);
   return`${crumb([['陣法']])}<h1>陣法</h1><p class="lead">戰鬥陣型：學咗陣法書之後，傭兵按位置排，全隊有額外能力，用材料可以升級。</p>${tabs}
   <section class="card"><h2>${esc(x.n)}</h2><p class="pre" style="margin:0 0 8px">${esc(x.desc)}</p>${need?`<div class="row" style="padding:0">${icon(need,36,'face')}<span class="nm">要擁有：<a href="#${esc(x.need)}">${esc(nm(need))}</a></span></div>`:''}${book?`<div class="small" style="margin-top:6px">陣法書：<a href="#${esc(x.book)}">${icon(book,22)} ${esc(nm(book))}</a></div>`:''}</section>
@@ -2091,7 +2097,7 @@ function onAppInput(e){const t=e.target;
   if(t.id==='ecq'){ui.ecq=t.value;const pos=t.selectionStart;render();const n=$('#ecq');if(n){n.focus();try{n.setSelectionRange(pos,pos);}catch(x){}}return;}
   if(t.id==='eq'){ui.eq=t.value;const pos=t.selectionStart;render();const n=$('#eq');if(n){n.focus();try{n.setSelectionRange(pos,pos);}catch(x){}}return;}
   if(t.id==='mn'){ui.mn=t.value;const pos=t.selectionStart;render();const n=$('#mn');if(n){n.focus();}return;}}
-app.addEventListener('change',e=>{const t=e.target;if(t.dataset&&t.dataset.mwage){const v=t.value.trim();if(v==='')delete MWAGE[t.dataset.mwage];else MWAGE[t.dataset.mwage]=Math.max(100,N(v));LS.set('gs-mwage',MWAGE);setTimeout(render,0);return;}if(t.dataset&&t.dataset.mfee){const v=t.value.trim();if(v==='')delete MFEE[t.dataset.mfee];else MFEE[t.dataset.mfee]=N(v);LS.set('gs-mfee',MFEE);setTimeout(render,0);return;}if(t.dataset&&t.dataset.mwl){WAGE=N(t.value)||100;WLR=WAGE;LS.set('gs-wage2',WAGE);setTimeout(render,0);return;}if(t.dataset&&t.dataset.mpr&&ui.mid){setTimeout(render,0);}
+app.addEventListener('change',e=>{const t=e.target;if(t.dataset&&t.dataset.fcr){ui[t.dataset.fcr]=t.value;render();return;}if(t.dataset&&t.dataset.mwage){const v=t.value.trim();if(v==='')delete MWAGE[t.dataset.mwage];else MWAGE[t.dataset.mwage]=Math.max(100,N(v));LS.set('gs-mwage',MWAGE);setTimeout(render,0);return;}if(t.dataset&&t.dataset.mfee){const v=t.value.trim();if(v==='')delete MFEE[t.dataset.mfee];else MFEE[t.dataset.mfee]=N(v);LS.set('gs-mfee',MFEE);setTimeout(render,0);return;}if(t.dataset&&t.dataset.mwl){WAGE=N(t.value)||100;WLR=WAGE;LS.set('gs-wage2',WAGE);setTimeout(render,0);return;}if(t.dataset&&t.dataset.mpr&&ui.mid){setTimeout(render,0);}
   if(t.id==='natstart'||t.id==='nathome'){C.nat=C.nat||{};if(t.id==='natstart')C.nat.start=t.value;else C.nat.home=t.checked;saveC();render();return;}
   if(t.dataset&&t.dataset.cbq){const cid=t.dataset.cbq,i=+t.dataset.i,v=Math.max(1,Math.min(99,N(t.value)||1));t.value=v;comboWrite(cid,d=>{if(d.mons[i])d.mons[i].q=v;});return;}
   if(t.dataset&&t.dataset.bs&&t.value!==''){t.value=STL(t.value);const s=stOf(BNODES[+t.dataset.bs].p);s.s=s.s||[];s.s[+t.dataset.j]=t.value;calcBonus();}
