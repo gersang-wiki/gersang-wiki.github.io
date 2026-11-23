@@ -1829,11 +1829,12 @@ function formCostHtml(bookId,lvs){const UP=lvs.filter(L=>L.m.length||L.fee);cons
   try{const bk=bookId&&get(bookId);
     if(bk){const r=recipeFor(bookId);if((r&&r.m.length)||!/不可交易/.test(bk.zh||'')){synAuto(bookId);const b0=tot();const h=expand(bookId,1,0,A,SYNP);tree+=`<li><b>陣法書</b> ${chip('小計 '+int(Math.round(tot()-b0))+' 兩')}<ul>${h}</ul></li>`;}
       else{tree+=`<li><b>陣法書</b><ul><li>${row(bookId,chip('唔可以交易，冇計錢'))}</li></ul></li>`;}}
-    for(const L of lvs.filter(L=>L.m.length||L.fee)){const b0=tot();const inner=L.m.map(([i,q])=>{synAuto(i);return expand(i,q,1,A,SYNP);}).join('');A.fee+=N(L.fee);
-      tree+=`<li><b>Lv ${L.l} → ${L.l+1}</b> ${L.fee?chip('手續費 '+int(L.fee)+' 兩'):''}${chip('小計 '+int(Math.round(tot()-b0))+' 兩')}${chip('累計 '+int(Math.round(tot()))+' 兩','cond')}${inner?`<ul>${inner}</ul>`:''}</li>`;}
+    {const LV=lvs.filter(L=>L.m.length||L.fee);if(LV.length){const agg=new Map();let fee=0;LV.forEach(L=>{fee+=N(L.fee);L.m.forEach(([i,q])=>agg.set(i,(agg.get(i)||0)+N(q)));});
+      const b0=tot();const inner=[...agg].map(([i,q])=>{synAuto(i);return expand(i,q,1,A,SYNP);}).join('');A.fee+=fee;
+      tree+=`<li><b>升級 Lv ${LV[0].l} → ${LV[LV.length-1].l+1}（${LV.length} 級合計）</b> ${fee?chip('手續費 '+int(fee)+' 兩'):''}${chip('小計 '+int(Math.round(tot()-b0))+' 兩')}${inner?`<ul>${inner}</ul>`:''}</li>`;}}
   }finally{MNC=s0;}
   const top=to;const miss=Object.keys(A.raw).filter(k=>!unitPrice(k));
-  return`<section class="card" id="synbox"><h2 style="margin-top:0">合成同升級成本</h2><p class="small muted" style="margin:0 0 8px">由合成陣法書開始，逐級列出升級要嘅道具同手續費。道具可以製作嘅話，會比較「買」同「自己合」，自動揀平啲嗰個（亮起嘅就係揀咗嘅做法）。每樣材料下面可以改做自己嘅單價。</p>${pick}
+  return`<section class="card" id="synbox"><h2 style="margin-top:0">合成同升級成本</h2><p class="small muted" style="margin:0 0 8px">揀由幾多級升到幾多級，嗰段升級要嘅道具同手續費會合埋計總數（未有陣法書就連合成陣法書都計埋）。道具可以製作嘅話，會比較「買」同「自己合」，自動揀平啲嗰個（亮起嘅就係揀咗嘅做法）。每樣材料下面可以改做自己嘅單價。</p>${pick}
    <div class="mcalc" data-fee="${A.fee}"><div class="mtree"><ul>${strip(tree)}</ul></div></div>
    <div class="mtot"><div><span>${fr?`由 Lv ${fr} 升到 Lv ${top} 總成本`:`由零做到 Lv ${top} 總成本`}</span> <b id="m-total">${int(Math.round(tot()))}</b> 兩</div>${A.fee?`<div class="small muted"><span>當中手續費</span> ${int(A.fee)} 兩</div>`:''}${miss.length?`<div class="small muted"><span>以下材料冇價錢，冇計入去：</span>${miss.map(i=>get(i)?`<a href="#${esc(i)}">${esc(nm(get(i)))}</a>`:'').join('、')}</div>`:''}</div></section>`;}
 function vDisp(S,di){const x=(S.disp||[])[di];const F=S.form||[];const tabs=tabsUI('fmi',[...F.map((y,i)=>[String(i),y.n]),...(S.disp||[]).map((y,i)=>['d'+i,y.n])],'d'+di);if(!x)return'';const need=x.need&&get(x.need);const book=x.book&&get(x.book);
