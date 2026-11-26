@@ -276,8 +276,8 @@ const CATS=['武器','盔甲','頭盔','手套','腰帶','鞋子','戒指','飾�
 const MCAT=['主角','傭兵','1次將帥','2次將帥','改造將帥','覺醒將帥','傳說將帥','明王','四天王','怪物','轉職怪物','幻獸','凶獸','神獸'];
 const FAC={monsters:[['nat','地區'],['zone','地圖區域','nat'],['el','屬性'],['mlv','定類魔法等級'],['grade','階級'],['move','類型']],
   mercs:[['cat','類別'],['job','轉職','cat'],['nat','國家']],skills:[['who','類別'],['ucat','兵種類別'],['calc','傷害公式']],
-  items:[['cat','分類'],['sub','細分類','cat']],places:[['region','類型']],combos:[],quests:[['qt','類型'],['lvb','等級']],npcs:[['fn','功能'],['nat','國家']]};
-const SORTS={monsters:[['nm','名稱'],['exp','經驗值'],['hp','生命'],['ev','掉落期望價值']],mercs:[['nm','名稱'],['base','基本能力']],skills:[['nm','名稱'],['cost','魔力消耗']],quests:[['lv','等級（低至高）',1],['nm','名稱']],combos:[['nm','名稱'],['cexp','經驗值'],['ev','掉落期望價值']]};
+  items:[['cat','分類'],['sub','細分類','cat'],['trade','交易'],['how','取得方法'],['ilv','裝備等級']],places:[['region','類型']],combos:[],quests:[['qt','類型'],['lvb','等級']],npcs:[['fn','功能'],['nat','國家']]};
+const SORTS={monsters:[['nm','名稱'],['exp','經驗值'],['hp','生命'],['ev','掉落期望價值']],mercs:[['nm','名稱'],['base','基本能力']],skills:[['nm','名稱'],['cost','魔力消耗']],quests:[['lv','等級（低至高）',1],['nm','名稱']],combos:[['nm','名稱'],['cexp','經驗值'],['ev','掉落期望價值']],items:[['nm','名稱'],['ilvd','裝備等級（高至低）'],['ilva','裝備等級（低至高）'],['atk','最大攻擊力'],['drop','掉落率（高至低）'],['pra','拍賣價（低至高）'],['prd','拍賣價（高至低）']]};
 const D={},BASE={},DBD={},SC={};TK.forEach(k=>{D[k]=new Map();BASE[k]={};DBD[k]=[];});
 let baseSrc={},dbSrc={},baseOk=false,ATL={},X={};
 const IMGV='20261114d';let SRC={},lang='zh',db=null,user=null,canWrite=null,load='loading',got={},filt={},sortBy={},shown={},draft=null,busy=false,ui={};
@@ -433,7 +433,7 @@ function sideFor(t,e){
   if(t==='monsters')return elChip(e.el)+chip(mLv(e)?mLv(e)[0]+' 級':'')+chip(e.grade)+(sortBy.monsters==='ev'&&(e.drops||[]).length?chip('每隻 '+int(Math.round(monEV(e).v))+' 兩','hot'):'');
   if(t==='mercs')return chip(e.cat)+chip(e.job)+chip(e.nat);
   if(t==='skills')return e.f?chip('有公式','hot'):'';
-  if(t==='items')return chip(e.sub||e.cat);
+  if(t==='items'){const id=idOf(e),so=sortBy.items,di=id&&dropInfo(id),m=id&&mkt(id);return chip(e.sub||e.cat)+(iLv(e)?chip('Lv '+iLv(e),'hot'):'')+(so==='atk'&&e.eq&&e.eq.mx?chip('攻擊 '+(e.eq.mn||0)+'–'+e.eq.mx):'')+((so==='drop'||filt.items&&filt.items.how==='怪物掉落')&&di?chip(di.n+' 隻怪掉・最高 '+di.p+'%','cond'):'')+((so==='pra'||so==='prd')&&m&&m.src!=='NPC'?chip(int(m.p)+' 兩'):'');}
   if(t==='combos')return chip(int(comboExp(e))+' 經驗','hot')+(sortBy.combos==='ev'?chip('每場 '+int(Math.round(comboEV(e).v))+' 兩','hot'):'');
   if(t==='quests')return (e.lv?chip('Lv '+e.lv,'hot'):'')+(e.pre&&D.quests.has(e.pre)?chip('有前置','cond'):'');
   return'';}
@@ -447,9 +447,15 @@ function subFor(t,e){
   if(t==='combos')return[e.at?nm(get(e.at)):'',(e.mons||[]).map(m=>`${nm(get(m.i))}×${m.q||1}`).join('、')].filter(Boolean).join('｜');
   return'';}
 const lvBand=l=>{l=N(l);if(!l)return'未有等級';const a=l<50?1:Math.floor(l/50)*50;return`Lv ${a}–${Math.floor(l/50)*50+49}`;};
-const facVal=(t,e,k)=>t==='monsters'&&k==='mlv'?(mLv(e)?[mLvTxt(e)]:[]):Array.isArray(e[k])&&k!=='sv'?e[k].map(String):k==='lvb'?[lvBand(e.lv)]:k==='sv'?(e.sv||[]):t==='skills'&&k==='calc'?[e.f?'可以計算':'未有公式']:t==='skills'&&k==='ucat'?[...new Set((e.users||[]).map(u=>get(u)&&get(u).cat).filter(Boolean))]:t==='skills'&&k==='who'?[...((e.users||[]).length?['傭兵技能']:[]),...((e.musers||[]).length||e.mon?['怪物技能']:[]),...((e.wi||[]).length?['武器技能']:[])]:(e[k]!=null&&e[k]!==''?[String(e[k])]:[]);
+let DROPI=null,IDO=null;
+const dropInfo=id=>{if(!DROPI){DROPI=new Map();for(const [,m] of D.monsters||[])for(const d of m.drops||[]){const x=DROPI.get(d.i)||{n:0,p:0};x.n++;x.p=Math.max(x.p,parseFloat(d.p)||0);DROPI.set(d.i,x);}}return DROPI.get(id);};
+const idOf=e=>{if(!IDO){IDO=new WeakMap();for(const [k,x] of D.items||[])IDO.set(x,k);}return IDO.get(e);};
+const iLv=e=>N((e.eq||{}).lv);
+const iLvBand=e=>{const l=iLv(e);if(!e.eq)return[];if(!l)return['冇等級要求'];if(l<50)return['Lv 1–49'];if(l<100)return['Lv 50–99'];if(l<150)return['Lv 100–149'];if(l<200)return['Lv 150–199'];return['Lv 200+'];};
+const iHow=e=>{const id=idOf(e);if(!id)return[];const r=[];if(dropInfo(id))r.push('怪物掉落');if((e.recipe||[]).length)r.push('可以製作');if(townBuy(id)>0)r.push('城鎮／NPC 有賣');if(mkt(id)&&mkt(id).src!=='NPC')r.push('拍賣所有價');return r;};
+const facVal=(t,e,k)=>t==='items'&&k==='trade'?[/不可交易|交易不可/.test(e.zh||'')?'不可交易':'可以交易']:t==='items'&&k==='how'?iHow(e):t==='items'&&k==='ilv'?iLvBand(e):t==='monsters'&&k==='mlv'?(mLv(e)?[mLvTxt(e)]:[]):Array.isArray(e[k])&&k!=='sv'?e[k].map(String):k==='lvb'?[lvBand(e.lv)]:k==='sv'?(e.sv||[]):t==='skills'&&k==='calc'?[e.f?'可以計算':'未有公式']:t==='skills'&&k==='ucat'?[...new Set((e.users||[]).map(u=>get(u)&&get(u).cat).filter(Boolean))]:t==='skills'&&k==='who'?[...((e.users||[]).length?['傭兵技能']:[]),...((e.musers||[]).length||e.mon?['怪物技能']:[]),...((e.wi||[]).length?['武器技能']:[])]:(e[k]!=null&&e[k]!==''?[String(e[k])]:[]);
 function vList(t){
-  const q=qv();const f=filt[t]=filt[t]||(t==='skills'?{who:'傭兵技能'}:{});let all=sorted(t);
+  const q=qv();const f=filt[t]=filt[t]||(t==='skills'?{who:'傭兵技能'}:t==='items'?{trade:'可以交易'}:{});let all=sorted(t);
   if(q)all=all.filter(([,e])=>hay(e).includes(q));
   let fb='';
   for(const [k,l,dep] of FAC[t].concat([['sv','版本']])){
@@ -459,6 +465,7 @@ function vList(t){
     if(!cnt.size||(!f[k]&&[...cnt.values()].every(n=>n===all.length)))continue;
     let vals=[...cnt.entries()].sort((a,b)=>b[1]-a[1]);
     if(k==='mlv')vals.sort((a,b)=>parseInt(a[0])-parseInt(b[0]));
+    if(k==='ilv'){const O=['Lv 1–49','Lv 50–99','Lv 100–149','Lv 150–199','Lv 200+','冇等級要求'];vals.sort((a,b)=>O.indexOf(a[0])-O.indexOf(b[0]));}
     if(k==='el')vals=ELS.filter(x=>cnt.has(x)).map(x=>[x,cnt.get(x)]);
     if(k==='ucat'&&t==='skills')vals=MCAT.filter(x=>cnt.has(x)).map(x=>[x,cnt.get(x)]);
     if(k==='cat'&&t==='mercs')vals=MCAT.filter(x=>cnt.has(x)).map(x=>[x,cnt.get(x)]);
@@ -467,7 +474,9 @@ function vList(t){
   for(const [k] of FAC[t].concat([['sv']]))if(f[k])all=all.filter(([,e])=>facVal(t,e,k).includes(f[k]));
   let hidN=0;if(t==='npcs'&&!f.fn&&!q){const b=all.length;all=all.filter(([,e])=>!(e.fn||[]).some(x=>x==='商團資訊'||x==='出口'));hidN=b-all.length;}
   const so=sortBy[t]||(SORTS[t]?SORTS[t][0][0]:'nm');const asc=SORTS[t]&&(SORTS[t].find(x=>x[0]===so)||[])[2];
-  if(so==='ev'||so==='cexp'){const V=new Map(all.map(([k,e])=>[k,so==='cexp'?comboExp(e):t==='combos'?comboEV(e).v:monEV(e).v]));all=[...all].sort((a,b)=>V.get(b[0])-V.get(a[0]));}
+  if(t==='items'&&so!=='nm'){const big=1e18;const val=([k,e])=>so==='ilvd'||so==='ilva'?(iLv(e)||(so==='ilva'?big:-1)):so==='atk'?(N((e.eq||{}).mx)||-1):so==='drop'?((dropInfo(k)||{}).p||-1):(()=>{const m=mkt(k);const v=m&&m.src!=='NPC'?N(m.p):0;return v>0?v:(so==='pra'?big:-1);})();
+    const up=so==='ilva'||so==='pra';const V=new Map(all.map(x=>[x[0],val(x)]));all=[...all].sort((a,b)=>up?V.get(a[0])-V.get(b[0]):V.get(b[0])-V.get(a[0]));}
+  else if(so==='ev'||so==='cexp'){const V=new Map(all.map(([k,e])=>[k,so==='cexp'?comboExp(e):t==='combos'?comboEV(e).v:monEV(e).v]));all=[...all].sort((a,b)=>V.get(b[0])-V.get(a[0]));}
   else if(so!=='nm')all=[...all].sort((a,b)=>asc?N(a[1][so]||9999)-N(b[1][so]||9999):N(b[1][so])-N(a[1][so]));
   const lim=shown[t]||100;
   const sortUi=SORTS[t]?`<label class="f" style="max-width:180px">排序<select id="sortsel">${SORTS[t].map(s=>`<option value="${s[0]}" ${so===s[0]?'selected':''}>${s[1]}</option>`).join('')}</select></label>`:'';
