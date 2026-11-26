@@ -276,7 +276,7 @@ const CATS=['武器','盔甲','頭盔','手套','腰帶','鞋子','戒指','飾�
 const MCAT=['主角','傭兵','1次將帥','2次將帥','改造將帥','覺醒將帥','傳說將帥','明王','四天王','怪物','轉職怪物','幻獸','凶獸','神獸'];
 const FAC={monsters:[['nat','地區'],['zone','地圖區域','nat'],['el','屬性'],['mlv','定類魔法等級'],['grade','階級'],['move','類型']],
   mercs:[['cat','類別'],['job','轉職','cat'],['nat','國家']],skills:[['who','類別'],['ucat','兵種類別'],['calc','傷害公式']],
-  items:[['cat','分類'],['sub','細分類','cat'],['trade','交易'],['how','取得方法'],['ilv','裝備等級']],places:[['region','類型']],combos:[],quests:[['qt','類型'],['lvb','等級']],npcs:[['fn','功能'],['nat','國家']]};
+  items:[['cat','分類'],['sub','細分類','cat'],['vt','版本類型'],['trade','交易'],['how','取得方法'],['ilv','裝備等級']],places:[['region','類型']],combos:[],quests:[['qt','類型'],['lvb','等級']],npcs:[['fn','功能'],['nat','國家']]};
 const SORTS={monsters:[['nm','名稱'],['exp','經驗值'],['hp','生命'],['ev','掉落期望價值']],mercs:[['nm','名稱'],['base','基本能力']],skills:[['nm','名稱'],['cost','魔力消耗']],quests:[['lv','等級（低至高）',1],['nm','名稱']],combos:[['nm','名稱'],['cexp','經驗值'],['ev','掉落期望價值']],items:[['nm','名稱'],['ilvd','裝備等級（高至低）'],['ilva','裝備等級（低至高）'],['atk','最大攻擊力'],['drop','掉落率（高至低）'],['pra','拍賣價（低至高）'],['prd','拍賣價（高至低）']]};
 const D={},BASE={},DBD={},SC={};TK.forEach(k=>{D[k]=new Map();BASE[k]={};DBD[k]=[];});
 let baseSrc={},dbSrc={},baseOk=false,ATL={},X={};
@@ -433,7 +433,7 @@ function sideFor(t,e){
   if(t==='monsters')return elChip(e.el)+chip(mLv(e)?mLv(e)[0]+' 級':'')+chip(e.grade)+(sortBy.monsters==='ev'&&(e.drops||[]).length?chip('每隻 '+int(Math.round(monEV(e).v))+' 兩','hot'):'');
   if(t==='mercs')return chip(e.cat)+chip(e.job)+chip(e.nat);
   if(t==='skills')return e.f?chip('有公式','hot'):'';
-  if(t==='items'){const id=idOf(e),so=sortBy.items,di=id&&dropInfo(id),m=id&&mkt(id);return chip(e.sub||e.cat)+(iLv(e)?chip('Lv '+iLv(e),'hot'):'')+(so==='atk'&&e.eq&&e.eq.mx?chip('攻擊 '+(e.eq.mn||0)+'–'+e.eq.mx):'')+((so==='drop'||filt.items&&filt.items.how==='怪物掉落')&&di?chip(di.n+' 隻怪掉・最高 '+di.p+'%','cond'):'')+((so==='pra'||so==='prd')&&m&&m.src!=='NPC'?chip(int(m.p)+' 兩'):'');}
+  if(t==='items'){const id=idOf(e),so=sortBy.items,di=id&&dropInfo(id),m=id&&mkt(id),nv=id&&(varGroups().base.get(id)||[]).length;return chip(e.sub||e.cat)+(nv?chip(nv+' 個版本','cond'):'')+(iLv(e)?chip('Lv '+iLv(e),'hot'):'')+(so==='atk'&&e.eq&&e.eq.mx?chip('攻擊 '+(e.eq.mn||0)+'–'+e.eq.mx):'')+((so==='drop'||filt.items&&filt.items.how==='怪物掉落')&&di?chip(di.n+' 隻怪掉・最高 '+di.p+'%','cond'):'')+((so==='pra'||so==='prd')&&m&&m.src!=='NPC'?chip(int(m.p)+' 兩'):'');}
   if(t==='combos')return chip(int(comboExp(e))+' 經驗','hot')+(sortBy.combos==='ev'?chip('每場 '+int(Math.round(comboEV(e).v))+' 兩','hot'):'');
   if(t==='quests')return (e.lv?chip('Lv '+e.lv,'hot'):'')+(e.pre&&D.quests.has(e.pre)?chip('有前置','cond'):'');
   return'';}
@@ -447,15 +447,29 @@ function subFor(t,e){
   if(t==='combos')return[e.at?nm(get(e.at)):'',(e.mons||[]).map(m=>`${nm(get(m.i))}×${m.q||1}`).join('、')].filter(Boolean).join('｜');
   return'';}
 const lvBand=l=>{l=N(l);if(!l)return'未有等級';const a=l<50?1:Math.floor(l/50)*50;return`Lv ${a}–${Math.floor(l/50)*50+49}`;};
+let RFM=null,VARG=null;
+const rfOf=id=>{if(!RFM){RFM=new Map();for(const [nid,n] of D.npcs||[])for(const r of n.rf||[])if(!RFM.has(r[1]))RFM.set(r[1],r);}return RFM.get(id);};
+const vKey=z=>String(z||'').replace(/\s*[-－]\s*不可交易\s*$/,'').replace(/\s*[\(（]不可交易[\)）]\s*$/,'').replace(/\s*[-－]\s*\d+\s*[天日]\s*$/,'').replace(/\s*\(\+\d+\)\s*/,'').trim();
+const vInfo=e=>{const z=String(e.zh||'');return{nt:/不可交易|交易不可/.test(z),tm:(z.match(/[-－]\s*(\d+)\s*[天日]/)||[])[1],up:(z.match(/\(\+(\d+)\)/)||[])[1]};};
+function varGroups(){if(VARG)return VARG;VARG={base:new Map(),of:new Map()};const byZh=new Map();
+  for(const [k,e] of D.items||[]){const z=String(e.zh||'');if(!byZh.has(z)||/不可交易/.test(get(byZh.get(z)).zh||''))byZh.set(z,k);}
+  const add=(b,k,ty)=>{if(b===k)return;if(!VARG.base.has(b))VARG.base.set(b,[]);VARG.base.get(b).push([k,ty]);VARG.of.set(k,b);};
+  for(const [k,e] of D.items||[]){if(e.base&&e.affix&&get(e.base)){add(String(e.base),k,e.sock?'s':'e');continue;}
+    const key=vKey(e.zh);if(key&&key!==e.zh){const b=byZh.get(key);if(b&&b!==k&&!vKey(get(b).zh).localeCompare(key)&&get(b).zh===key){const vi=vInfo(e);add(b,k,vi.up?'u':vi.tm?'t':'n');}}}
+  return VARG;}
+const varType=e=>{const id=idOf(e);if(!id)return['原裝'];const b=varGroups().of.get(id);if(!b)return['原裝'];const t=(varGroups().base.get(b)||[]).find(x=>x[0]===id)[1];return[{s:'開孔／入石',e:'鬼道',u:'強化 +N',t:'限時版',n:'不可交易版'}[t]];};
+function estCost(id,path=[],memo={}){if(id in memo)return memo[id];const ex=get(id),bs=ex&&ex.affix?(mkt(id)&&mkt(id).src!=='NPC'?{p:N(mkt(id).p)}:null):buySrc(id);let best=bs&&bs.p>0?bs.p:NaN;const r0=path.length<8&&!path.includes(id)?recipeFor(id):null;const r=r0&&ex&&ex.affix&&r0.m.length===1&&r0.m[0][0]===String(ex.base)?null:r0;
+  if(r&&r.m.length){let c=N(r.fee);for(const [m,q] of r.m){const v=estCost(m,[...path,id],memo);if(!isFinite(v)){c=NaN;break;}c+=q*v;}c/=r.y||1;if(isFinite(c)&&!(c>=best))best=c;}
+  return memo[id]=best;}
 let DROPI=null,IDO=null;
 const dropInfo=id=>{if(!DROPI){DROPI=new Map();for(const [,m] of D.monsters||[])for(const d of m.drops||[]){const x=DROPI.get(d.i)||{n:0,p:0};x.n++;x.p=Math.max(x.p,parseFloat(d.p)||0);DROPI.set(d.i,x);}}return DROPI.get(id);};
 const idOf=e=>{if(!IDO){IDO=new WeakMap();for(const [k,x] of D.items||[])IDO.set(x,k);}return IDO.get(e);};
 const iLv=e=>N((e.eq||{}).lv);
 const iLvBand=e=>{const l=iLv(e);if(!e.eq)return[];if(!l)return['冇等級要求'];if(l<50)return['Lv 1–49'];if(l<100)return['Lv 50–99'];if(l<150)return['Lv 100–149'];if(l<200)return['Lv 150–199'];return['Lv 200+'];};
 const iHow=e=>{const id=idOf(e);if(!id)return[];const r=[];if(dropInfo(id))r.push('怪物掉落');if((e.recipe||[]).length)r.push('可以製作');if(townBuy(id)>0)r.push('城鎮／NPC 有賣');if(mkt(id)&&mkt(id).src!=='NPC')r.push('拍賣所有價');return r;};
-const facVal=(t,e,k)=>t==='items'&&k==='trade'?[/不可交易|交易不可/.test(e.zh||'')?'不可交易':'可以交易']:t==='items'&&k==='how'?iHow(e):t==='items'&&k==='ilv'?iLvBand(e):t==='monsters'&&k==='mlv'?(mLv(e)?[mLvTxt(e)]:[]):Array.isArray(e[k])&&k!=='sv'?e[k].map(String):k==='lvb'?[lvBand(e.lv)]:k==='sv'?(e.sv||[]):t==='skills'&&k==='calc'?[e.f?'可以計算':'未有公式']:t==='skills'&&k==='ucat'?[...new Set((e.users||[]).map(u=>get(u)&&get(u).cat).filter(Boolean))]:t==='skills'&&k==='who'?[...((e.users||[]).length?['傭兵技能']:[]),...((e.musers||[]).length||e.mon?['怪物技能']:[]),...((e.wi||[]).length?['武器技能']:[])]:(e[k]!=null&&e[k]!==''?[String(e[k])]:[]);
+const facVal=(t,e,k)=>t==='items'&&k==='vt'?varType(e):t==='items'&&k==='trade'?[/不可交易|交易不可/.test(e.zh||'')?'不可交易':'可以交易']:t==='items'&&k==='how'?iHow(e):t==='items'&&k==='ilv'?iLvBand(e):t==='monsters'&&k==='mlv'?(mLv(e)?[mLvTxt(e)]:[]):Array.isArray(e[k])&&k!=='sv'?e[k].map(String):k==='lvb'?[lvBand(e.lv)]:k==='sv'?(e.sv||[]):t==='skills'&&k==='calc'?[e.f?'可以計算':'未有公式']:t==='skills'&&k==='ucat'?[...new Set((e.users||[]).map(u=>get(u)&&get(u).cat).filter(Boolean))]:t==='skills'&&k==='who'?[...((e.users||[]).length?['傭兵技能']:[]),...((e.musers||[]).length||e.mon?['怪物技能']:[]),...((e.wi||[]).length?['武器技能']:[])]:(e[k]!=null&&e[k]!==''?[String(e[k])]:[]);
 function vList(t){
-  const q=qv();const f=filt[t]=filt[t]||(t==='skills'?{who:'傭兵技能'}:t==='items'?{trade:'可以交易'}:{});let all=sorted(t);
+  const q=qv();const f=filt[t]=filt[t]||(t==='skills'?{who:'傭兵技能'}:t==='items'?{trade:'可以交易',vt:'原裝'}:{});let all=sorted(t);
   if(q)all=all.filter(([,e])=>hay(e).includes(q));
   let fb='';
   for(const [k,l,dep] of FAC[t].concat([['sv','版本']])){
@@ -546,8 +560,7 @@ function vDetail(id,t,e){
     {if(!ENCHB){ENCHB={};for(const [k,x] of D.items)if(x.base&&x.affix){const g=x.sock?'s':'e';ENCHB[g+x.base]=ENCHB[g+x.base]||[];ENCHB[g+x.base].push(k);}}
      const EL=(ENCHB['e'+id]||[]).slice().sort((a,b)=>(get(a).affix.g-get(b).affix.g)||String(get(a).affix.n).localeCompare(get(b).affix.n));
      const SL=(ENCHB['s'+id]||[]).slice().sort((a,b)=>(get(a).sock-get(b).sock)||String(nm(get(a))).localeCompare(nm(get(b))));
-     if(SL.length)b+=section(`開孔／入石版本（${SL.length}）`,rows(SL.map(k=>{const x=get(k),m=mkt(k);return row(k,chip(x.sock===1?'開孔':'入石','cond')+(x.affix.st.length?chip(x.affix.st.map(([a,v])=>a+' +'+v).join('、')):'')+(m?chip(int(m.p)+' 兩','hot'):''));})));
-     if(EL.length)b+=section(`鬼道（咒術磨練）版本（${EL.length}）`,rows(EL.map(k=>{const x=get(k),m=mkt(k);return row(k,chip(x.affix.g+' 級','cond')+chip(x.affix.st.map(([a,v])=>a+' +'+v).join('、'))+(m?chip(int(m.p)+' 兩','hot'):''));})));}
+     b+=varSection(id,EL,SL);}
     if((e.shape||[]).some(x=>x[1].length))b+=section('外型強化能力',`<div class="tw"><table class="dt"><tr><th class="r">強化</th><th>能力</th></tr>${e.shape.map(([lv,st])=>`<tr><td class="r">+${lv}</td><td>${st.map(([k,v])=>`${esc(k)} +${v}`).join('、')||'–'}</td></tr>`).join('')}</table></div>`);
     {const ss=itemSets().get(id);if(ss)b+=`<section class="card"><h2>套裝效果</h2><div style="display:grid;gap:8px">${ss.map(st=>setCard(st,true,id)).join('')}</div></section>`;}
     {const J=(SY().jewel||{})[id];if(J&&J.length){const KL={s:'力量',d:'敏捷',v:'體力',i:'智力',el:'屬性值',lel:'地屬性值',atk:'傷害 %',dr:'傷害減少 %',cp:'爆擊率 %',cd:'爆擊傷害 %'};
@@ -579,8 +592,8 @@ function vDetail(id,t,e){
     if(mk||po.length)b+=section('點樣製作',(e.by?rows([row(e.by,chip('製作 NPC'),get(e.by)&&get(e.by).at?nm(get(get(e.by).at)):'')]):'')+pairRows(e.recipe,'q')
       +po.map(([k,p])=>`<p class="small" style="margin:10px 0 4px"><a href="#pro">${PRO_L[k]}</a> Lv ${p.lv}–${p.cap}，每次做 ${p.n} 件，手續費 ${int(p.fee)}</p>${rows(p.m.map(m=>row(m[0],chip('×'+m[1],'cond')+(m[2]?chip('+'+m[2]):''))))}`).join('')
       +`<div class="bar" style="margin-top:8px"><a class="btn" href="#mats" data-matsof="${esc(id)}">計埋所有原材料</a></div>`);
-    const ui2=usedInItems(id),qn=questsNeed(id),qg=questsGive(id),pu=proUse(id);
-    b+=section(`用途（${ui2.length+qn.length+pu.length}）`,rows(ui2.map(([x,it])=>{const d=it.recipe.find(r=>r.i===id);return row(x,chip('製作材料')+(d.q?chip('×'+d.q,'cond'):''));})
+    const ui2=usedInItems(id).filter(([x])=>varGroups().of.get(x)!==id),qn=questsNeed(id),qg=questsGive(id),pu=proUse(id);
+    const KU=new Map();if(D.npcs.size)(itemSources().U[id]||[]).forEach(u=>{if(u.it&&!KU.has(u.it))KU.set(u.it,u.k);});b+=section(`用途（${ui2.length+qn.length+pu.length}）`,rows(ui2.map(([x,it])=>{const d=it.recipe.find(r=>r.i===id);return row(x,chip(KU.get(x)||'製作材料')+(d.q?chip('×'+d.q,'cond'):''));})
       .concat(pu.map(([k,p])=>row(p.it,chip(PRO_L[k])+chip('×'+p.m.find(m=>m[0]===id)[1],'cond'))))
       .concat(qn.map(([x,qq])=>{const d=qq.need.find(r=>r.i===id);return row(x,chip('任務需要')+(d.q?chip('×'+d.q,'cond'):''));}))));
     b+=section('任務獎勵',rows(qg.map(([x])=>row(x,chip('任務')))));
@@ -800,6 +813,7 @@ function recipeFor(id){const r=recipeFor0(id);if(r){r.fee0=r.fee||0;r.fee0x=r.fe
 const vilOf=e=>{const m=String(e&&e.note||'').match(/^(?:村莊生產（|在印度村莊)([^，（(]+?)(?:，|製作)/);return m?m[1]:'';};
 function recipeFor0(id){const st=statOf(id);if(st){const R=routeItems(st.mon);return R.m.length||R.f?{y:1,m:R.m,tools:[],how:'合成再封印',fee:R.f}:null;}
   const e=get(id);if(e&&(e.recipe||[]).length){const sr=e.affix&&!e.sock?e.recipe.map(r=>get(r.i)).find(x=>x&&x.eb&&N(x.eb.rate)>0&&N(x.eb.rate)<100):null;const R={y:+((String(e.note||'').match(/每次\s*(\d+)\s*個/)||[])[1]||1),feeX:craftFee(e),fee:craftFee(e)+wlOf(e)*wageOf(id),wl:wlOf(e),wage:wageOf(id),m:e.recipe.filter(r=>/^\d+$/.test(String(r.q))).flatMap(r=>r.alt?(r.d?altPickN(r).map(a=>[a,1,r.g]):[[altPick(r),+r.q,r.g]]):[[r.i,+r.q]]),tools:e.recipe.filter(r=>!/^\d+$/.test(String(r.q))).map(r=>r.i),how:vilOf(e)?'印度村莊 '+vilOf(e):e.by?'NPC':'製作'};if(sr){R.rate=N(sr.eb.rate);R.y=R.rate/100;R.how='咒術磨練';}return R;}
+  {const rf=rfOf(id);if(rf){const [fr,,rt,m,fee]=rf;const k=100/Math.max(1,N(rt)||100);return{y:1,m:[[fr,1],...(m||[]).map(([i,q])=>[i,N(q)*k])],tools:[],how:'強化',fee:N(fee)*k,urate:N(rt)||100};}}
   const p=proOf(id)[0];if(p)return{y:p[1].n||1,m:p[1].m.map(m=>[m[0],m[1]]),tools:[],how:PRO_L[p[0]],fee:p[1].fee};return null;}
 let MNC=LS.get('gs-mnocraft',{});
 const buyIt=(id,depth)=>depth>0&&!!MNC[id];
@@ -820,7 +834,7 @@ function expand(id,n,depth,acc,path,g){const r0=depth<6&&!path.includes(id)?reci
   if(!r){acc.raw[id]=(acc.raw[id]||0)+n;acc.sum+=unitPrice(id)*n;return`<li>${row(id,chip('×'+fmt(n),'cond')+(g?chip(g+(g==='幻獸武器'?'（要唔同款，揀咗最平嗰幾件）':'（任選一款，揀咗最平）')):''))}${priceLine(id,n)}</li>`;}
   const times=r.rate?n/r.y:Math.ceil(n/r.y);if(r.fee)acc.fee+=r.fee*times;
   for(const t of r.tools)acc.tools.add(t);
-  return`<li>${row(id,chip('×'+fmt(n),'cond')+(g?chip(g+(g==='幻獸武器'?'（要唔同款，揀咗最平嗰幾件）':'（任選一款，揀咗最平）')):'')+chip(r.how)+(r.y>1?chip(`做 ${times} 次`):'')+(r.rate?chip(`成功率 ${r.rate}%・平均做 ${fmt(Math.round(times*10)/10)} 次`):'')+(r.fee?chip('費用 '+int(r.fee*times)+' 兩'):'')+(depth>0?cmpChips(id,path,depth):''))}${depth>0?cmpNote(id,path,depth):''}${r.wl?`<div class="mline small"><span class="nw">作業量 ${int(r.wl*times)} ×</span> <input type="number" min="100" step="100" inputmode="numeric" data-mwage="${esc(id)}" value="${MWAGE[id]!=null?esc(MWAGE[id]):''}" placeholder="${int(WLR)}" aria-label="工資"> <span class="nw">兩工資 ＝ <b>${int(r.wl*times*r.wage)}</b> 兩</span> <span class="muted">（預計約 ${(Math.round(r.wl*times/(wageDay(r.wage)*30)*10)/10).toLocaleString('en-US')} 日）</span></div>`:''}${r.wl&&!r.fee0x?'':`<div class="mline small"><span class="muted">每次製作費用</span> <input type="number" min="0" inputmode="numeric" data-mfee="${esc(id)}" value="${r.ownFee?esc(MFEE[id]):''}" placeholder="${int(r.fee0)}" aria-label="每次製作費用"> 兩 <span class="muted">${r.ownFee?'（自己填）':r.fee0?'（遊戲資料）':'（資料冇寫；有收費就填）'}</span></div>`}${depth>0?`<div class="bar" style="margin:2px 0 6px"><button type="button" class="btn" data-mnc="${esc(id)}">唔合，直接買</button></div>`:''}<ul>${r.m.map(([m,q,g2])=>expand(m,q*times,depth+1,acc,[...path,id],g2)).join('')}</ul></li>`;}
+  return`<li>${row(id,chip('×'+fmt(n),'cond')+(g?chip(g+(g==='幻獸武器'?'（要唔同款，揀咗最平嗰幾件）':'（任選一款，揀咗最平）')):'')+chip(r.how)+(r.y>1?chip(`做 ${times} 次`):'')+(r.urate&&r.urate<100?chip(`成功率 ${r.urate}%・材料平均用 ${fmt(Math.round(1000/r.urate)/10)} 次（當失敗只蝕材料）`):'')+(r.rate?chip(`成功率 ${r.rate}%・平均做 ${fmt(Math.round(times*10)/10)} 次`):'')+(r.fee?chip('費用 '+int(r.fee*times)+' 兩'):'')+(depth>0?cmpChips(id,path,depth):''))}${depth>0?cmpNote(id,path,depth):''}${r.wl?`<div class="mline small"><span class="nw">作業量 ${int(r.wl*times)} ×</span> <input type="number" min="100" step="100" inputmode="numeric" data-mwage="${esc(id)}" value="${MWAGE[id]!=null?esc(MWAGE[id]):''}" placeholder="${int(WLR)}" aria-label="工資"> <span class="nw">兩工資 ＝ <b>${int(r.wl*times*r.wage)}</b> 兩</span> <span class="muted">（預計約 ${(Math.round(r.wl*times/(wageDay(r.wage)*30)*10)/10).toLocaleString('en-US')} 日）</span></div>`:''}${r.wl&&!r.fee0x?'':`<div class="mline small"><span class="muted">每次製作費用</span> <input type="number" min="0" inputmode="numeric" data-mfee="${esc(id)}" value="${r.ownFee?esc(MFEE[id]):''}" placeholder="${int(r.fee0)}" aria-label="每次製作費用"> 兩 <span class="muted">${r.ownFee?'（自己填）':r.fee0?'（遊戲資料）':'（資料冇寫；有收費就填）'}</span></div>`}${depth>0?`<div class="bar" style="margin:2px 0 6px"><button type="button" class="btn" data-mnc="${esc(id)}">唔合，直接買</button></div>`:''}<ul>${r.m.map(([m,q,g2])=>expand(m,q*times,depth+1,acc,[...path,id],g2)).join('')}</ul></li>`;}
 function autoCheap(id){const seen=new Set();const walk=(x,path,depth)=>{const r=depth<6&&!path.includes(x)?recipeFor(x):null;if(!r||!r.m.length)return;for(const [m] of r.m)walk(m,[...path,x],depth+1);
     if(depth>0&&!seen.has(x)){seen.add(x);delete MNC[x];const b=realPrice(x),c=craftReal(x,path,depth,true);if(b>0&&isFinite(c)&&b<c)MNC[x]=1;}};walk(id,[],0);LS.set('gs-mnocraft',MNC);}
 function vMats(){const id=ui.mid,n=Math.max(1,N(ui.mn)||1);let out='';
@@ -856,6 +870,20 @@ function loadMkt(){fetch('prices.json?v='+Date.now().toString(36).slice(0,-4)).t
   MKT=M;MKT_T=x.t;if(ui.mid||/^#gi/.test(location.hash))schedule();}).catch(()=>{});}
 let MKT_WIN=30,MKT_T=0,MKV=[];let ENCHB=null;
 // 附魔／強化版（拍賣所名有 <前綴>）：prices.json 嘅 v，同原裝分開計；喺原裝道具頁同對應嘅附魔道具頁顯示
+function varSection(id,EL,SL){const G=varGroups(),b0=G.of.get(id);
+  if(b0&&get(b0))return section('原裝同其他版本',`<p style="margin:0">呢件係 <a href="#${esc(b0)}">${icon(get(b0),28)} ${esc(nm(get(b0)))}</a> 嘅其中一個版本。<a href="#${esc(b0)}">睇全部版本同價錢 ›</a></p>`);
+  const V=G.base.get(id)||[];if(!V.length)return'';const memo={};
+  const pr=k=>{const m=mkt(k);return m&&m.src!=='NPC'?N(m.p):0;};
+  const rowV=(k,lab)=>{const x=get(k),p=pr(k),c=estCost(k,[],memo);return`<tr><td><a href="#${esc(k)}">${icon(x,24)} ${esc(nm(x))}</a></td><td>${lab}</td><td class="r">${p?`<b>${int(p)}</b>`:'<span class="muted">–</span>'}</td><td class="r">${isFinite(c)&&c>0?int(Math.round(c)):'<span class="muted">–</span>'}</td></tr>`;};
+  const grp=(ty,ttl,list,lab,sort)=>{const L=V.filter(v=>v[1]===ty).map(v=>v[0]);if(sort)L.sort(sort);return L.length?`<tr><th colspan="4" style="text-align:left;padding-top:10px">${ttl}（${L.length}）</th></tr>${L.map(k=>rowV(k,lab(get(k)))).join('')}`:'';};
+  const upN=x=>N(vInfo(x).up);
+  const body=rowV(id,'<span class="chip hot">原裝</span>')
+   +grp('u','強化 +1～+N',0,x=>chip('+'+vInfo(x).up+(vInfo(x).nt?'・不可交易':'')),(a,b)=>(vInfo(get(a)).nt-vInfo(get(b)).nt)||upN(get(a))-upN(get(b)))
+   +grp('n','不可交易版',0,()=>chip('不可交易','cond'))
+   +grp('t','限時版',0,x=>chip(vInfo(x).tm+' 日','cond'))
+   +grp('s','開孔／入石',0,x=>chip(x.sock===1?'開孔':'入石','cond')+(x.affix.st.length?' '+x.affix.st.map(([a,v])=>a+' +'+v).join('、'):''),(a,b)=>(get(a).sock-get(b).sock)||String(nm(get(a))).localeCompare(nm(get(b))))
+   +grp('e','鬼道（咒術磨練）',0,x=>chip(x.affix.g+' 級','cond')+' '+x.affix.st.map(([a,v])=>a+' +'+v).join('、'),(a,b)=>(get(a).affix.g-get(b).affix.g)||String(get(a).affix.n).localeCompare(get(b).affix.n));
+  return section(`全部版本（${V.length+1}）`,`<p class="small muted" style="margin:0 0 6px">原裝、強化 +N、不可交易、限時、開孔入石同鬼道版本都喺呢度。拍賣價係國際服拍賣所 30 日最低；成本係揀最平做法（買或者自己合／強化）估計，強化當失敗只蝕材料。撳名睇詳細同成本計算。</p><div class="tw"><table class="dt"><tr><th>道具</th><th>版本</th><th class="r">拍賣價（兩）</th><th class="r">估計成本（兩）</th></tr>${body}</table></div>`);}
 function varHist(id){const e=get(id),bs=e&&e.base?String(e.base):'',zn=e?String(e.zh||''):'';
   const L=MKV.filter(v=>v.ids.includes(id)||(bs&&v.zh&&v.ids.includes(bs)&&zn.includes(v.zh))).sort((a,b)=>a.p-b.p);if(!L.length)return'';
   const dt=t=>new Date(t).toLocaleDateString('zh-HK');
@@ -1004,6 +1032,7 @@ function srcGroup(L){const m=new Map();L.forEach(x=>{if(!x.link||x.m||x.npc){m.s
   const byK=new Map();out.forEach(x=>{const k=x.k;(byK.get(k)||byK.set(k,[]).get(k)).push(x);});const res=[];byK.forEach(L=>{res.push(...L.slice(0,6));if(L.length>6)res[res.length-1]={...res[res.length-1],more:L.length-6};});return res;}
 function itemSrcHtml(id){if(!D.npcs.size)return'';const {S,U}=itemSources();const s=srcGroup(S[id]||[]);let u=U[id]||[];let b='';
   if(s.length)b+=section(`其他取得方法（${s.length}）`,`<div class="plist">${s.map(x=>`<div class="prow"><div class="pbody"><div class="phead">${x.link?`<a class="chip hot" href="#${esc(x.link)}">${esc(x.k)}</a>`:`<span class="chip hot">${esc(x.k)}</span>`}${x.d?`<span>${esc(x.d)}</span>`:''}${x.qs?`<span class="chip">×${x.qs}</span>`:''}${x.more?`<a class="small" href="#${esc(x.link)}">仲有 ${x.more} 個 ›</a>`:''}${x.npc&&get(x.npc)?`<a href="#${esc(x.npc)}">${esc(nm(get(x.npc)))}</a>`:''}${x.p?`<span class="chip">${x.p}%</span>`:''}${x.pr?`<span class="chip">${int(x.pr)} 兩</span>`:''}</div>${x.from?`<div class="small muted">由 <a href="#${esc(x.from)}">${esc(nm(get(x.from)))}</a></div>`:''}${matsHtml(x.m)}</div></div>`).join('')}</div>`);
+  u=u.filter(x=>!(x.it&&get(x.it)&&(get(x.it).recipe||[]).some(r=>r.i===id)));
   if(u.length){{const sn=new Set();u=u.filter(x=>{const kk=x.it?'i|'+x.it+'|'+x.k:'o|'+x.k+'|'+(x.d||'')+'|'+(x.link||'');if(sn.has(kk))return false;sn.add(kk);return true;});}const ui_=u.filter(x=>x.it&&get(x.it)),uo=u.filter(x=>!x.it);b+=section(`可以用嚟（${u.length}）`,rows(ui_.slice(0,60).map(x=>row(x.it,chip(x.k,'cond'),x.npc&&get(x.npc)?nm(get(x.npc)):'')))+(uo.length?`<div class="plist">${uo.slice(0,80).map(x=>`<div class="prow"><div class="pbody"><div class="phead"><a class="chip cond" href="#${esc(x.link)}">${esc(x.k)}</a>${x.d?`<span>${esc(x.d)}</span>`:''}${x.q>1?`<span class="chip">×${x.q}</span>`:''}</div></div></div>`).join('')}</div>`:''));}
   return b;}
 
