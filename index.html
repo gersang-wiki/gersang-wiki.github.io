@@ -277,7 +277,8 @@ const MCAT=['主角','傭兵','1次將帥','2次將帥','改造將帥','覺醒�
 const FAC={monsters:[['nat','地區'],['zone','地圖區域','nat'],['el','屬性'],['mlv','定類魔法等級'],['grade','階級'],['move','類型']],
   mercs:[['cat','類別'],['job','轉職','cat'],['nat','國家']],skills:[['who','類別'],['ucat','兵種類別'],['calc','傷害公式']],
   items:[['cat','分類'],['sub','細分類','cat'],['vt','版本類型'],['trade','交易'],['how','取得方法'],['ilv','裝備等級']],places:[['region','類型']],combos:[],quests:[['qt','類型'],['lvb','等級']],npcs:[['fn','功能'],['nat','國家']]};
-const SORTS={monsters:[['nm','名稱'],['exp','經驗值'],['hp','生命'],['ev','掉落期望價值']],mercs:[['nm','名稱'],['base','基本能力']],skills:[['nm','名稱'],['cost','魔力消耗']],quests:[['lv','等級（低至高）',1],['nm','名稱']],combos:[['nm','名稱'],['cexp','經驗值'],['ev','掉落期望價值']],items:[['nm','名稱'],['ilvd','裝備等級（高至低）'],['ilva','裝備等級（低至高）'],['atk','最大攻擊力'],['drop','掉落率（高至低）'],['pra','拍賣價（低至高）'],['prd','拍賣價（高至低）']]};
+const RNG={monsters:[['pr','打擊抵抗','≤'],['mr','法術抵抗','≤'],['hp','生命','≤'],['exp','經驗值','≥']]};
+const SORTS={monsters:[['nm','名稱'],['exp','經驗值'],['hp','生命'],['ev','掉落期望價值'],['pr','打擊抵抗（低至高）',1],['mr','法術抵抗（低至高）',1]],mercs:[['nm','名稱'],['base','基本能力']],skills:[['nm','名稱'],['cost','魔力消耗']],quests:[['lv','等級（低至高）',1],['nm','名稱']],combos:[['nm','名稱'],['cexp','經驗值'],['ev','掉落期望價值']],items:[['nm','名稱'],['ilvd','裝備等級（高至低）'],['ilva','裝備等級（低至高）'],['atk','最大攻擊力'],['drop','掉落率（高至低）'],['pra','拍賣價（低至高）'],['prd','拍賣價（高至低）']]};
 const D={},BASE={},DBD={},SC={};TK.forEach(k=>{D[k]=new Map();BASE[k]={};DBD[k]=[];});
 let baseSrc={},dbSrc={},baseOk=false,ATL={},X={};
 const IMGV='20261114d';let SRC={},lang='zh',db=null,user=null,canWrite=null,load='loading',got={},filt={},sortBy={},shown={},draft=null,busy=false,ui={};
@@ -430,7 +431,7 @@ const MLN=['初級','初級','一般','中級','高級','最高級','最高級',
 function mLv(e){if(!e)return null;if(e.mt!=null)return[e.mt,MLN[Math.min(e.mt,11)]];const h=+e.hp;if(!h)return null;const r=MLV.find(x=>h<=x[2]);return[r[0],r[1],1];}
 const mLvTxt=e=>{const v=mLv(e);return v?`${v[0]} 級`+(v[1]?`・${v[1]}`:''):'';};
 function sideFor(t,e){
-  if(t==='monsters')return elChip(e.el)+chip(mLv(e)?mLv(e)[0]+' 級':'')+chip(e.grade)+(sortBy.monsters==='ev'&&(e.drops||[]).length?chip('每隻 '+int(Math.round(monEV(e).v))+' 兩','hot'):'');
+  if(t==='monsters'){const rv=(ui.rng||{}).monsters||{},so=sortBy.monsters;return elChip(e.el)+chip(mLv(e)?mLv(e)[0]+' 級':'')+chip(e.grade)+((so==='pr'||so==='mr'||rv.pr||rv.mr)&&(e.pr!=null||e.mr!=null)?chip('打擊抵抗 '+(e.pr??'?')+'・法術抵抗 '+(e.mr??'?'),'cond'):'')+(sortBy.monsters==='ev'&&(e.drops||[]).length?chip('每隻 '+int(Math.round(monEV(e).v))+' 兩','hot'):'');}
   if(t==='mercs')return chip(e.cat)+chip(e.job)+chip(e.nat);
   if(t==='skills')return e.f?chip('有公式','hot'):'';
   if(t==='items'){const id=idOf(e),so=sortBy.items,di=id&&dropInfo(id),m=id&&mkt(id),nv=id&&(varGroups().base.get(id)||[]).length;return chip(e.sub||e.cat)+(nv?chip(nv+' 個版本','cond'):'')+(iLv(e)?chip('Lv '+iLv(e),'hot'):'')+(so==='atk'&&e.eq&&e.eq.mx?chip('攻擊 '+(e.eq.mn||0)+'–'+e.eq.mx):'')+((so==='drop'||filt.items&&filt.items.how==='怪物掉落')&&di?chip(di.n+' 隻怪掉・最高 '+di.p+'%','cond'):'')+((so==='pra'||so==='prd')&&m&&m.src!=='NPC'?chip(int(m.p)+' 兩'):'');}
@@ -486,6 +487,9 @@ function vList(t){
     fb+=`<div class="fgroup"><span class="flabel">${l}</span><div class="filters" aria-label="${l}"><button type="button" data-filt="${k}" data-v="" aria-pressed="${!f[k]}">全部</button>${vals.map(([v,n])=>`<button type="button" data-filt="${k}" data-v="${esc(v)}" aria-pressed="${f[k]===String(v)}">${esc(k==='sv'?(SV[v]||v):v)} <span class="n">${n}</span></button>`).join('')}</div></div>`;
   }
   for(const [k] of FAC[t].concat([['sv']]))if(f[k])all=all.filter(([,e])=>facVal(t,e,k).includes(f[k]));
+  {const RG=RNG[t];if(RG){const rv=(ui.rng=ui.rng||{})[t]=ui.rng[t]||{};
+    fb+=`<div class="fgroup"><span class="flabel">數值範圍</span><div class="filters" style="gap:8px">${RG.map(([k,l,op])=>`<label class="small" style="display:flex;align-items:center;gap:4px">${l} ${op}<input type="number" inputmode="numeric" min="0" data-rng="${k}" value="${rv[k]??''}" placeholder="不限" style="width:84px"></label>`).join('')}${RG.some(([k])=>rv[k]!=null&&rv[k]!=='')?'<button type="button" data-rngclr="1">清除數值</button>':''}</div></div>`;
+    for(const [k,,op] of RG){const v=rv[k];if(v==null||v==='')continue;const n=+v;all=all.filter(([,e])=>e[k]!=null&&(op==='≤'?N(e[k])<=n:N(e[k])>=n));}}}
   let hidN=0;if(t==='npcs'&&!f.fn&&!q){const b=all.length;all=all.filter(([,e])=>!(e.fn||[]).some(x=>x==='商團資訊'||x==='出口'));hidN=b-all.length;}
   const so=sortBy[t]||(SORTS[t]?SORTS[t][0][0]:'nm');const asc=SORTS[t]&&(SORTS[t].find(x=>x[0]===so)||[])[2];
   if(t==='items'&&so!=='nm'){const big=1e18;const val=([k,e])=>so==='ilvd'||so==='ilva'?(iLv(e)||(so==='ilva'?big:-1)):so==='atk'?(N((e.eq||{}).mx)||-1):so==='drop'?((dropInfo(k)||{}).p||-1):(()=>{const m=mkt(k);const v=m&&m.src!=='NPC'?N(m.p):0;return v>0?v:(so==='pra'?big:-1);})();
@@ -2021,6 +2025,7 @@ function trAll(){trBusy=true;try{trEl(document.body);document.documentElement.la
 
 const H=()=>location.hash.replace(/^#/,'');
 app.addEventListener('click',async e=>{const t=e.target;let b;
+  if((b=t.closest('[data-rngclr]'))){const ty=H();if(ui.rng)ui.rng[ty]={};shown[ty]=0;render();return;}
   if((b=t.closest('[data-filt]'))){const ty=H();const ff=filt[ty]=filt[ty]||{};ff[b.dataset.filt]=b.dataset.v;for(const [k,,dep] of FAC[ty]||[])if(dep===b.dataset.filt)ff[k]='';shown[ty]=0;render();return;}
   if((b=t.closest('[data-more]'))){const k=b.dataset.more;shown[k]=(shown[k]||100)+100;render();return;}
   if((b=t.closest('[data-keepq]')))return;
@@ -2136,7 +2141,7 @@ function onAppInput(e){const t=e.target;
   if(t.id==='ecq'){ui.ecq=t.value;const pos=t.selectionStart;render();const n=$('#ecq');if(n){n.focus();try{n.setSelectionRange(pos,pos);}catch(x){}}return;}
   if(t.id==='eq'){ui.eq=t.value;const pos=t.selectionStart;render();const n=$('#eq');if(n){n.focus();try{n.setSelectionRange(pos,pos);}catch(x){}}return;}
   if(t.id==='mn'){ui.mn=t.value;const pos=t.selectionStart;render();const n=$('#mn');if(n){n.focus();}return;}}
-app.addEventListener('change',e=>{const t=e.target;if(t.dataset&&t.dataset.fcr){ui[t.dataset.fcr]=t.value;render();return;}if(t.dataset&&t.dataset.mwage){const v=t.value.trim();if(v==='')delete MWAGE[t.dataset.mwage];else MWAGE[t.dataset.mwage]=Math.max(100,N(v));LS.set('gs-mwage',MWAGE);setTimeout(render,0);return;}if(t.dataset&&t.dataset.mfee){const v=t.value.trim();if(v==='')delete MFEE[t.dataset.mfee];else MFEE[t.dataset.mfee]=N(v);LS.set('gs-mfee',MFEE);setTimeout(render,0);return;}if(t.dataset&&t.dataset.mwl){WAGE=N(t.value)||100;WLR=WAGE;LS.set('gs-wage2',WAGE);setTimeout(render,0);return;}if(t.dataset&&t.dataset.mpr&&ui.mid){setTimeout(render,0);}
+app.addEventListener('change',e=>{const t=e.target;if(t.dataset&&t.dataset.rng){const L=H();ui.rng=ui.rng||{};(ui.rng[L]=ui.rng[L]||{})[t.dataset.rng]=t.value;shown[L]=0;render();return;}if(t.dataset&&t.dataset.fcr){ui[t.dataset.fcr]=t.value;render();return;}if(t.dataset&&t.dataset.mwage){const v=t.value.trim();if(v==='')delete MWAGE[t.dataset.mwage];else MWAGE[t.dataset.mwage]=Math.max(100,N(v));LS.set('gs-mwage',MWAGE);setTimeout(render,0);return;}if(t.dataset&&t.dataset.mfee){const v=t.value.trim();if(v==='')delete MFEE[t.dataset.mfee];else MFEE[t.dataset.mfee]=N(v);LS.set('gs-mfee',MFEE);setTimeout(render,0);return;}if(t.dataset&&t.dataset.mwl){WAGE=N(t.value)||100;WLR=WAGE;LS.set('gs-wage2',WAGE);setTimeout(render,0);return;}if(t.dataset&&t.dataset.mpr&&ui.mid){setTimeout(render,0);}
   if(t.id==='natstart'||t.id==='nathome'){C.nat=C.nat||{};if(t.id==='natstart')C.nat.start=t.value;else C.nat.home=t.checked;saveC();render();return;}
   if(t.dataset&&t.dataset.cbq){const cid=t.dataset.cbq,i=+t.dataset.i,v=Math.max(1,Math.min(99,N(t.value)||1));t.value=v;comboWrite(cid,d=>{if(d.mons[i])d.mons[i].q=v;});return;}
   if(t.dataset&&t.dataset.bs&&t.value!==''){t.value=STL(t.value);const s=stOf(BNODES[+t.dataset.bs].p);s.s=s.s||[];s.s[+t.dataset.j]=t.value;calcBonus();}
