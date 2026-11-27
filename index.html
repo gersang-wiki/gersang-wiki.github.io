@@ -1732,15 +1732,14 @@ function mtable(t){return`<div class="tw"><table class="dt mt"><tr>${t.cols.map(
 function miscBody(k,sub){const m=(SY().misc||{})[k];if(!m)return'';const tabs=m.tabs;const ti=Math.min(+(ui['mt_'+k]||0),tabs.length-1);
   return`${tabs.length>1?`<div class="filters" role="group" style="margin:6px 0 8px">${tabs.map((t,i)=>`<button type="button" data-tab="mt_${k}" data-v="${i}" aria-pressed="${i===ti}">${esc(t.n||('表 '+(i+1)))} <span class="n">${t.rows.length}</span></button>`).join('')}</div>`:''}${mtable(tabs[ti])}<p class="small muted" style="margin:6px 0 0">資料嚟自遊戲檔 ${esc(m.src)}</p>`;}
 function miscSection(k,title){const m=(SY().misc||{})[k];return m?section(title||m.t,`<p class="small" style="margin:0 0 6px">${esc(m.d)}</p>${miscBody(k)}`):'';}
-const GATHER_N=0.6*10+0.2*20+0.16*30+0.04*40; // 遊戲 ProWork.json：每次發放 60% 10 個、20% 20 個、16% 30 個、4% 40 個
 function gatherEV(m){const T=m.tabs[0];if(!T)return'';const lv=ui.gLv==null||ui.gLv===''?999:N(ui.gLv);
-  const R=T.rows.map(r=>{const its=(r[6]||[]).filter(x=>x&&x.i&&N(x.lv)<=lv);let v=0,best=null;
-    const L=its.map(x=>{const p=parseFloat(x.p)/100||0,u=dropVal(x.i),ev=p*GATHER_N*u.u;v+=ev;if(!best||ev>best.ev)best={i:x.i,ev,u:u.u,k:u.k,p};return{i:x.i,p,u,ev};});
-    return{r,v,best,L,ok:N(r[1])<=lv};}).filter(x=>x.ok).sort((a,b)=>b.v-a.v);
-  const srcL=k=>k==='A'?'拍賣價':k==='N'?'賣 NPC 價':k==='own'?'自訂價':'';
-  return section('採集期望價值',`<div class="bar" style="margin:0 0 8px;align-items:center;gap:8px"><label class="small">你嘅技術等級 <input type="number" min="1" max="250" data-glv="1" value="${ui.gLv??''}" placeholder="全部" style="width:80px"></label></div>
-   <div class="plist">${R.map((x,n)=>`<div class="prow"><span class="pico rank">${n+1}</span><div class="pbody"><div class="phead"><span class="pname">${esc(typeof x.r[0]==='object'?x.r[0].t:x.r[0])}</span>${chip('Lv '+x.r[1])}${chip('每次 '+int(Math.round(x.v))+' 兩','hot')}${chip('手續費 '+int(x.r[5])+' 兩')}</div>${x.best&&get(x.best.i)?`<div class="small muted"><span>最值錢</span>：<a href="#${esc(x.best.i)}">${esc(nm(get(x.best.i)))}</a> ${int(x.best.u)} 兩（<span>${srcL(x.best.k)}</span>）</div>`:''}</div></div>`).join('')}</div>
-   <p class="small muted" style="margin:8px 0 0">計法同怪物掉落一樣：每樣材料嘅機率 × 每次平均發放數量 × 單價，再加埋。每次平均發放 ${fmt(GATHER_N)} 個：遊戲設定每次有 60% 機會得 10 個、20% 得 20 個、16% 得 30 個、4% 得 40 個。單價用拍賣所 30 日最低價，冇就用賣 NPC 價。只計你技術等級夠嘅材料。遊戲資料冇寫一次作業（300 分鐘）會發放幾多次，所以呢度係「每次發放」嘅價值，用嚟比較邊個地點抵；手續費係每次作業收一次。</p>`);}
+  const R=T.rows.filter(r=>N(r[1])<=lv).map(r=>{const fee=N(r[5]);const L=(r[6]||[]).filter(x=>x&&x.i&&N(x.lv)<=lv).map(x=>{const q=N(x.q)||parseFloat(x.p)||0,u=dropVal(x.i);return{i:x.i,q,lv:N(x.lv),u,v:q*u.u};}).sort((a,b)=>b.v-a.v);
+    return{r,fee,L,best:L[0]?L[0].v-fee:-fee};}).sort((a,b)=>b.best-a.best);
+  const srcL=k=>k==='A'?'拍賣價':k==='N'?'賣 NPC 價':k==='own'?'自訂價':'冇價';
+  return section('採集效益',`<div class="bar" style="margin:0 0 8px;align-items:center;gap:8px"><label class="small">你嘅技術等級 <input type="number" min="1" max="250" data-glv="1" value="${ui.gLv??''}" placeholder="全部" style="width:80px"></label></div>
+   <div class="plist">${R.map((x,n)=>`<div class="prow"><span class="pico rank">${n+1}</span><div class="pbody"><div class="phead"><span class="pname">${esc(typeof x.r[0]==='object'?x.r[0].t:x.r[0])}</span>${chip('Lv '+x.r[1])}${chip('手續費 '+int(x.fee)+' 兩')}</div>
+     ${x.L.map(y=>`<div class="small" style="display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;margin:3px 0">${get(y.i)?`<a href="#${esc(y.i)}">${esc(nm(get(y.i)))}</a>`:''}<span class="muted">×${fmt(y.q)}・${int(y.u.u)} 兩（<span>${srcL(y.u.k)}</span>）</span>${chip('= '+int(Math.round(y.v))+' 兩','hot')}${chip('扣手續費 '+int(Math.round(y.v-x.fee))+' 兩',y.v-x.fee>0?'cond':'')}</div>`).join('')||'<div class="small muted">你嘅技術等級未採到任何材料</div>'}</div></div>`).join('')}</div>
+   <p class="small muted" style="margin:8px 0 0">每次採集揀一樣材料，會得到固定數量（×後面個數）。價值 = 數量 × 單價；單價用拍賣所 30 日最低價，冇就用賣 NPC 價。手續費每次採集收一次。地點按最抵嗰樣材料扣手續費之後排，只計你技術等級夠嘅材料。</p>`);}
 function vMisc(k){const m=(SY().misc||{})[k];if(!m)return`<h1>搵唔到</h1>`;return`${crumb([[m.t]])}<h1>${esc(m.t)}</h1><p class="lead">${esc(m.d)}</p>${k==='g_herb'||k==='g_ore'?gatherEV(m):''}<section class="card">${miscBody(k)}</section>`;}
 
 
