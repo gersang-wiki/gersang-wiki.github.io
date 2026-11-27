@@ -869,6 +869,7 @@ let WAGE=N(LS.get('gs-wage2',100))||100;let WLR=WAGE;const wlOf=e=>{const m=e&&S
 function loadMkt(){fetch('prices.json?v='+Date.now().toString(36).slice(0,-4)).then(r=>r.ok?r.json():null).then(x=>{if(!x||!x.m)return;const S=()=>'拍賣所';
   const T=d=>d>1e11?d:new Date(Math.floor(d/1e4),Math.floor(d/100)%100-1,d%100,12).getTime();const M={};MKT_WIN=x.win||30;
   for(const [k,v] of Object.entries(x.m)){if(v[1]==='N')continue;const H=((x.h||{})[k]||[]).map(a=>[T(a[0]),a[1],a[2]?S(a[2]):'拍賣所']);M[k]={p:v[0],src:S(v[1]),sv:'gl',ts:v[2]?T(v[2]):x.t,h:H.length?H:(v[1]==='N'?[]:[[v[2]?T(v[2]):x.t,v[0],S(v[1])]])};}
+  for(const m of Object.values(M)){const cut=(x.t||Date.now())-MKT_WIN*864e5-864e5;const W=m.h.filter(h=>h[0]>=cut&&N(h[1])>0).sort((a,b)=>a[0]-b[0]);if(W.length<3)continue;const ys=W.map(h=>N(h[1])).sort((a,b)=>a-b),med=ys[ys.length>>1];const bad=new Set(W.filter((h,i)=>N(h[1])<med*0.25&&[i-1,i+1].filter(j=>j>=0&&j<W.length).every(j=>N(W[j][1])>=med*0.5)));if(!bad.size)continue;const ok=W.filter(h=>!bad.has(h));m.out=[...bad];const best=ok.reduce((a,h)=>N(h[1])<N(a[1])?h:a);m.p=N(best[1]);m.ts=best[0];}
   MKV=Object.entries(x.v||{}).filter(([k,v])=>v&&Array.isArray(v.p)&&N(v.p[0])>0).map(([k,v])=>({k,ids:v.ids||[],zh:v.zh||'',p:N(v.p[0]),ts:v.p[2]?T(v.p[2]):x.t,h:(v.h||[]).map(a=>[T(a[0]),N(a[1])])}));
   VARMAP=0;
   MKT=M;MKT_T=x.t;if(ui.mid||/^#gi/.test(location.hash))schedule();}).catch(()=>{});}
@@ -900,6 +901,8 @@ const mkt=id=>{mapVar();const m=MKT[id];return m&&N(m.p)>0?m:null;};
 const basePrice=id=>{const e=get(id);const f=faceOf(e);if(f)return f;const m=e&&String(e.desc||'').match(/價格\s*([\d,]+)/);return m?N(m[1].replace(/,/g,'')):0;};
 const sellPrice=id=>faceOf(get(id))||Math.floor(basePrice(id)/3);
 const unitPrice=id=>{if(MPR[id]!==''&&MPR[id]!=null)return N(MPR[id]);const b=buySrc(id);return b?b.p:sellPrice(id);};
+function ambNote(id){const e=get(id);if(!e||!e.en)return'';const k=String(e.en).trim().toLowerCase();const o=[];for(const [x,y] of D.items)if(x!==id&&y.en&&String(y.en).trim().toLowerCase()===k&&y.zh!==e.zh&&MKT[x])o.push(x);
+  return o.length?`<p class="small" style="margin:4px 0;color:var(--warn,#e0b050)">⚠ 國際服英文名同 ${o.map(x=>`<a href="#${esc(x)}">${esc(nm(get(x)))}</a>`).join('、')} 一樣（${esc(e.en)}），拍賣所分唔到係邊件，呢個價可能係嗰件嘅。</p>`:'';}
 function priceHist(id){const m=MKT[id];if(!m||!N(m.p))return'';
   const H=(Array.isArray(m.h)?m.h:[]).filter(x=>Array.isArray(x)&&N(x[1])>0).sort((a,b)=>a[0]-b[0]);
   const dt=t=>new Date(t).toLocaleDateString('zh-HK');const src=()=>'拍賣所最低';
@@ -907,7 +910,7 @@ function priceHist(id){const m=MKT[id];if(!m||!N(m.p))return'';
     const X=v=>P+(x1>x0?(v-x0)/(x1-x0):.5)*(W-2*P),Y=v=>Hh-P-(y1>y0?(v-y0)/(y1-y0):.5)*(Hh-2*P);
     svg=`<svg viewBox="0 0 ${W} ${Hh}" style="width:100%;height:auto;color:var(--accent)" role="img" aria-label="價格走勢"><polyline fill="none" stroke="currentColor" stroke-width="2.5" points="${H.map(x=>X(x[0])+','+Y(N(x[1]))).join(' ')}"/>${H.map(x=>`<circle cx="${X(x[0])}" cy="${Y(N(x[1]))}" r="3.5" fill="currentColor"><title>${dt(x[0])}：${int(N(x[1]))} 兩</title></circle>`).join('')}</svg>
     <div class="bar between small muted"><span>${dt(x0)}</span><span>最低 ${int(y0)}・最高 ${int(y1)} 兩</span><span>${dt(x1)}</span></div>`;}
-  return section('國際服拍賣所歷史價格（Auction）',`<p style="margin:0 0 6px"><b class="big">${int(N(m.p))} 兩</b> <span class="small muted">過去 ${MKT_WIN} 日最低（${dt(m.ts)}）</span></p>${svg}
+  return section('國際服拍賣所歷史價格（Auction）',`<p style="margin:0 0 6px"><b class="big">${int(N(m.p))} 兩</b> <span class="small muted">過去 ${MKT_WIN} 日最低（${dt(m.ts)}）</span></p>${svg}${m.out?`<p class="small muted" style="margin:4px 0">已略過 ${m.out.length} 日異常低價（得嗰一日特別平，低過平時四分一，好可能係讀錯數字或者有人放錯價）：${m.out.map(h=>dt(h[0])+' '+int(N(h[1]))+' 兩').join('、')}</p>`:''}${ambNote(id)}
    ${H.length?`<details class="fx" style="margin-top:8px"><summary>每日最低價紀錄（${H.length}）</summary><div class="tw"><table class="dt"><tr><th>日期</th><th class="r">單價（兩）</th><th>來源</th></tr>${H.slice().reverse().map(x=>`<tr><td>${dt(x[0])}</td><td class="r">${int(N(x[1]))}</td><td>${src(x[2])}</td></tr>`).join('')}</table></div></details>`:''}
    <p class="small muted" style="margin:6px 0 0">每日由國際服拍賣所（Auction）自動讀取，同一日只記最低單價；網站顯示同計成本用過去 30 日最低價；30 日內冇人賣嘅材料，計成本時用賣 NPC 價（基本價格 ÷ 3）。</p>`);}
 /* ---------- professional skills ---------- */
