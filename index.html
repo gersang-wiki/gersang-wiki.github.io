@@ -593,7 +593,7 @@ function vDetail(id,t,e){
     if(pg.length)b+=section('採集',`<table class="dt"><tr><th>技能</th><th class="r">需要等級</th><th class="r">費用</th></tr>${pg.map(([k,p])=>`<tr><td><a href="#pro">${PRO_L[k]}</a></td><td class="r">${p.lv}</td><td class="r">${int(p.fee)}</td></tr>`).join('')}</table>`);
     const mk=(e.recipe||[]).length||e.by,po=proOf(id);
     {const st=statOf(id);if(st&&get(st.mon))b+=section('點樣製作',rows([row(st.mon,chip('合成再封印','hot')+chip('Lv '+st.lv))])+`<p class="small muted" style="margin:8px 0 0">合成呢隻幻獸，練到 Lv ${st.lv} 或以上，再封印成石像。</p><div class="bar" style="margin-top:8px"><a class="btn" href="#mats" data-matsof="${esc(id)}">計埋所有原材料</a></div>`);}
-    if(mk||po.length)b+=section('點樣製作',(e.by?rows([row(e.by,chip('製作 NPC'),get(e.by)&&get(e.by).at?nm(get(get(e.by).at)):'')]):'')+pairRows(e.recipe,'q')
+    if(mk||po.length)b+=section('點樣製作',(e.by?rows([row(e.by,chip('製作 NPC'),get(e.by)&&get(e.by).at?nm(get(get(e.by).at)):'')]):'')+facHtml(e)+pairRows(e.recipe,'q')
       +po.map(([k,p])=>`<p class="small" style="margin:10px 0 4px"><a href="#pro">${PRO_L[k]}</a> Lv ${p.lv}–${p.cap}，每次做 ${p.n} 件，手續費 ${int(p.fee)}</p>${rows(p.m.map(m=>row(m[0],chip('×'+m[1],'cond')+(m[2]?chip('+'+m[2]):''))))}`).join('')
       +`<div class="bar" style="margin-top:8px"><a class="btn" href="#mats" data-matsof="${esc(id)}">計埋所有原材料</a></div>`);
     const ui2=usedInItems(id).filter(([x])=>varGroups().of.get(x)!==id),qn=questsNeed(id),qg=questsGive(id),pu=proUse(id);
@@ -903,6 +903,10 @@ const sellPrice=id=>faceOf(get(id))||Math.floor(basePrice(id)/3);
 const unitPrice=id=>{if(MPR[id]!==''&&MPR[id]!=null)return N(MPR[id]);const b=buySrc(id);return b?b.p:sellPrice(id);};
 function ambNote(id){const e=get(id);if(!e||!e.en)return'';const k=String(e.en).trim().toLowerCase();const o=[];for(const [x,y] of D.items)if(x!==id&&y.en&&String(y.en).trim().toLowerCase()===k&&y.zh!==e.zh&&MKT[x])o.push(x);
   return o.length?`<p class="small" style="margin:4px 0;color:var(--warn,#e0b050)">⚠ 國際服英文名同 ${o.map(x=>`<a href="#${esc(x)}">${esc(nm(get(x)))}</a>`).join('、')} 一樣（${esc(e.en)}），拍賣所分唔到係邊件，呢個價可能係嗰件嘅。</p>`:'';}
+const TIERL=['最初就整到','要升級到第 1 階段','要升級到第 2 階段','要升級到第 3 階段'];
+function facHtml(e){if(!/生產設施/.test(e.note||'')||e.by)return'';const F=e.fac||[];
+  if(!F.length)return`<p class="small muted" style="margin:0 0 8px">要喺生產設施用作業量製作，但遊戲嘅生產設施表冇列呢件，可能已經唔可以喺設施生產。</p>`;
+  return`<div style="margin:0 0 10px">${F.map(([f,bd,t,ns])=>`<p class="small" style="margin:0 0 4px"><span>要用嘅生產設施</span>：<b>${esc(f)}</b>${bd?`（<span>${esc(bd)}</span>）`:''}・<span>${TIERL[t]||''}</span>・<span>${ns.map(esc).join('、')}</span></p>`).join('')}</div>`;}
 function priceHist(id){const m=MKT[id];if(!m||!N(m.p))return'';
   const H=(Array.isArray(m.h)?m.h:[]).filter(x=>Array.isArray(x)&&N(x[1])>0).sort((a,b)=>a[0]-b[0]);
   const dt=t=>new Date(t).toLocaleDateString('zh-HK');const src=()=>'拍賣所最低';
@@ -1728,7 +1732,16 @@ function mtable(t){return`<div class="tw"><table class="dt mt"><tr>${t.cols.map(
 function miscBody(k,sub){const m=(SY().misc||{})[k];if(!m)return'';const tabs=m.tabs;const ti=Math.min(+(ui['mt_'+k]||0),tabs.length-1);
   return`${tabs.length>1?`<div class="filters" role="group" style="margin:6px 0 8px">${tabs.map((t,i)=>`<button type="button" data-tab="mt_${k}" data-v="${i}" aria-pressed="${i===ti}">${esc(t.n||('表 '+(i+1)))} <span class="n">${t.rows.length}</span></button>`).join('')}</div>`:''}${mtable(tabs[ti])}<p class="small muted" style="margin:6px 0 0">資料嚟自遊戲檔 ${esc(m.src)}</p>`;}
 function miscSection(k,title){const m=(SY().misc||{})[k];return m?section(title||m.t,`<p class="small" style="margin:0 0 6px">${esc(m.d)}</p>${miscBody(k)}`):'';}
-function vMisc(k){const m=(SY().misc||{})[k];if(!m)return`<h1>搵唔到</h1>`;return`${crumb([[m.t]])}<h1>${esc(m.t)}</h1><p class="lead">${esc(m.d)}</p><section class="card">${miscBody(k)}</section>`;}
+const GATHER_N=0.6*10+0.2*20+0.16*30+0.04*40; // 遊戲 ProWork.json：每次發放 60% 10 個、20% 20 個、16% 30 個、4% 40 個
+function gatherEV(m){const T=m.tabs[0];if(!T)return'';const lv=ui.gLv==null||ui.gLv===''?999:N(ui.gLv);
+  const R=T.rows.map(r=>{const its=(r[6]||[]).filter(x=>x&&x.i&&N(x.lv)<=lv);let v=0,best=null;
+    const L=its.map(x=>{const p=parseFloat(x.p)/100||0,u=dropVal(x.i),ev=p*GATHER_N*u.u;v+=ev;if(!best||ev>best.ev)best={i:x.i,ev,u:u.u,k:u.k,p};return{i:x.i,p,u,ev};});
+    return{r,v,best,L,ok:N(r[1])<=lv};}).filter(x=>x.ok).sort((a,b)=>b.v-a.v);
+  const srcL=k=>k==='A'?'拍賣價':k==='N'?'賣 NPC 價':k==='own'?'自訂價':'';
+  return section('採集期望價值',`<div class="bar" style="margin:0 0 8px;align-items:center;gap:8px"><label class="small">你嘅技術等級 <input type="number" min="1" max="250" data-glv="1" value="${ui.gLv??''}" placeholder="全部" style="width:80px"></label></div>
+   <div class="tw"><table class="dt"><tr><th>地點</th><th class="r">技術等級</th><th class="r">每次發放期望價值（兩）</th><th>最值錢嘅材料</th><th class="r">手續費</th></tr>${R.map(x=>`<tr><td>${esc(typeof x.r[0]==='object'?x.r[0].t:x.r[0])}</td><td class="r">${x.r[1]}</td><td class="r"><b>${int(Math.round(x.v))}</b></td><td>${x.best&&get(x.best.i)?`<a href="#${esc(x.best.i)}">${esc(nm(get(x.best.i)))}</a> <span class="small muted">${int(x.best.u)} 兩（<span>${srcL(x.best.k)}</span>）</span>`:'–'}</td><td class="r">${int(x.r[5])}</td></tr>`).join('')}</table></div>
+   <p class="small muted" style="margin:8px 0 0">計法同怪物掉落一樣：每樣材料嘅機率 × 每次平均發放數量 × 單價，再加埋。每次平均發放 ${fmt(GATHER_N)} 個：遊戲設定每次有 60% 機會得 10 個、20% 得 20 個、16% 得 30 個、4% 得 40 個。單價用拍賣所 30 日最低價，冇就用賣 NPC 價。只計你技術等級夠嘅材料。遊戲資料冇寫一次作業（300 分鐘）會發放幾多次，所以呢度係「每次發放」嘅價值，用嚟比較邊個地點抵；手續費係每次作業收一次。</p>`);}
+function vMisc(k){const m=(SY().misc||{})[k];if(!m)return`<h1>搵唔到</h1>`;return`${crumb([[m.t]])}<h1>${esc(m.t)}</h1><p class="lead">${esc(m.d)}</p>${k==='g_herb'||k==='g_ore'?gatherEV(m):''}<section class="card">${miscBody(k)}</section>`;}
 
 
 /* ---------- 轉國計算 ---------- */
@@ -2144,7 +2157,7 @@ function onAppInput(e){const t=e.target;
   if(t.id==='ecq'){ui.ecq=t.value;const pos=t.selectionStart;render();const n=$('#ecq');if(n){n.focus();try{n.setSelectionRange(pos,pos);}catch(x){}}return;}
   if(t.id==='eq'){ui.eq=t.value;const pos=t.selectionStart;render();const n=$('#eq');if(n){n.focus();try{n.setSelectionRange(pos,pos);}catch(x){}}return;}
   if(t.id==='mn'){ui.mn=t.value;const pos=t.selectionStart;render();const n=$('#mn');if(n){n.focus();}return;}}
-app.addEventListener('change',e=>{const t=e.target;if(t.dataset&&t.dataset.rng){const L=H();ui.rng=ui.rng||{};(ui.rng[L]=ui.rng[L]||{})[t.dataset.rng]=t.value;shown[L]=0;render();return;}if(t.dataset&&t.dataset.fcr){ui[t.dataset.fcr]=t.value;render();return;}if(t.dataset&&t.dataset.mwage){const v=t.value.trim();if(v==='')delete MWAGE[t.dataset.mwage];else MWAGE[t.dataset.mwage]=Math.max(100,N(v));LS.set('gs-mwage',MWAGE);setTimeout(render,0);return;}if(t.dataset&&t.dataset.mfee){const v=t.value.trim();if(v==='')delete MFEE[t.dataset.mfee];else MFEE[t.dataset.mfee]=N(v);LS.set('gs-mfee',MFEE);setTimeout(render,0);return;}if(t.dataset&&t.dataset.mwl){WAGE=N(t.value)||100;WLR=WAGE;LS.set('gs-wage2',WAGE);setTimeout(render,0);return;}if(t.dataset&&t.dataset.mpr&&ui.mid){setTimeout(render,0);}
+app.addEventListener('change',e=>{const t=e.target;if(t.dataset&&t.dataset.glv){ui.gLv=t.value;render();return;}if(t.dataset&&t.dataset.rng){const L=H();ui.rng=ui.rng||{};(ui.rng[L]=ui.rng[L]||{})[t.dataset.rng]=t.value;shown[L]=0;render();return;}if(t.dataset&&t.dataset.fcr){ui[t.dataset.fcr]=t.value;render();return;}if(t.dataset&&t.dataset.mwage){const v=t.value.trim();if(v==='')delete MWAGE[t.dataset.mwage];else MWAGE[t.dataset.mwage]=Math.max(100,N(v));LS.set('gs-mwage',MWAGE);setTimeout(render,0);return;}if(t.dataset&&t.dataset.mfee){const v=t.value.trim();if(v==='')delete MFEE[t.dataset.mfee];else MFEE[t.dataset.mfee]=N(v);LS.set('gs-mfee',MFEE);setTimeout(render,0);return;}if(t.dataset&&t.dataset.mwl){WAGE=N(t.value)||100;WLR=WAGE;LS.set('gs-wage2',WAGE);setTimeout(render,0);return;}if(t.dataset&&t.dataset.mpr&&ui.mid){setTimeout(render,0);}
   if(t.id==='natstart'||t.id==='nathome'){C.nat=C.nat||{};if(t.id==='natstart')C.nat.start=t.value;else C.nat.home=t.checked;saveC();render();return;}
   if(t.dataset&&t.dataset.cbq){const cid=t.dataset.cbq,i=+t.dataset.i,v=Math.max(1,Math.min(99,N(t.value)||1));t.value=v;comboWrite(cid,d=>{if(d.mons[i])d.mons[i].q=v;});return;}
   if(t.dataset&&t.dataset.bs&&t.value!==''){t.value=STL(t.value);const s=stOf(BNODES[+t.dataset.bs].p);s.s=s.s||[];s.s[+t.dataset.j]=t.value;calcBonus();}
