@@ -544,7 +544,7 @@ function vDetail(id,t,e){
     if(EV.L.length){const top=[...EV.L].sort((a,b)=>b.ev-a.ev).slice(0,3).filter(x=>x.ev/EV.v>=0.01);const ex=N(e.exp);
       b+=section('掉落期望價值',`<div class="big">${int(Math.round(EV.v))} 兩</div><div class="small muted">平均每打一隻</div>
       <table class="bd" style="margin-top:8px"><tr><td>每 1,000 隻</td><td>${int(Math.round(EV.v*1000))} 兩</td></tr>${ex?`<tr><td>每 1 點經驗</td><td>${(Math.round(EV.v/ex*100)/100).toLocaleString('en-US')} 兩</td></tr>`:''}${top.length?`<tr><td>主要來源</td><td>${top.map(x=>`${esc(nm(get(x.i)))} ${Math.round(x.ev/EV.v*100)}%`).join(lang==='zh'?'、':', ')}</td></tr>`:''}</table>
-      <p class="small muted" style="margin:6px 0 0">期望價值 ＝ 每樣掉落物嘅掉落率 × 單價，再加埋。單價用國際服拍賣所 30 日最低價；城鎮／NPC 有賣嘅道具冇人會喺拍賣買，所以用賣返俾有賣嗰間 NPC 嘅價（約 NPC 賣價 94%）；拍賣所冇價嘅用賣 NPC 價。你喺材料計算自己填過嘅單價會優先用。冇寫掉落率嘅道具唔計。</p>`);}
+      <p class="small muted" style="margin:6px 0 0">期望價值 ＝ 每樣掉落物嘅掉落率 × 單價，再加埋。單價用國際服拍賣所 30 日最低價；城鎮／NPC 有賣嘅道具冇人會喺拍賣買，所以用賣返俾有賣嗰間 NPC 嘅價（約城鎮賣價 94%；城鎮價會浮動，呢度用原價估算，想準啲可以喺材料計算自己填價）；拍賣所冇價嘅用賣 NPC 價。你喺材料計算自己填過嘅單價會優先用。冇寫掉落率嘅道具唔計。</p>`);}
     b+=section(`掉落道具（${(e.drops||[]).length}）`,rows((e.drops||[]).map(d=>{const x=EM.get(d.i);return row(d.i,(d.p?chip(d.p,'hot'):'')+(d.c?chip(d.c,'cond'):'')+(x&&x.u?chip('每隻 '+(x.ev>=1?int(Math.round(x.ev)):(Math.round(x.ev*100)/100).toLocaleString('en-US'))+' 兩'+(x.k==='N'?'（NPC 價）':x.k==='T'?'（賣店價）':'')):''));}))+((e.drops||[]).some(d=>d.p)?'<p class="small muted" style="margin:6px 0 0">掉落機率由遊戲檔讀出（遊戲以十萬分之幾記錄）。</p>':''));}
     {const LC=sorted('combos').filter(([,c])=>c.lead===id),OC=sorted('combos').filter(([,c])=>c.lead!==id&&(c.mons||[]).some(m=>m.i===id));
      const addB=db&&canWrite!==false?`<div class="bar"><a class="btn" href="#new-combos" data-combolead="${esc(id)}">＋ 新增以呢隻做主怪物嘅組合</a></div>`:'';
@@ -641,7 +641,7 @@ function vDetail(id,t,e){
       b+=section('掉落期望價值',`<div class="big">${int(Math.round(EV.v))} 兩</div><div class="small muted">平均每打一場</div>
       <table class="bd" style="margin-top:8px"><tr><td>每 1,000 場</td><td>${int(Math.round(EV.v*1000))} 兩</td></tr>${ex?`<tr><td>每 1 點經驗</td><td>${(Math.round(EV.v/ex*100)/100).toLocaleString('en-US')} 兩</td></tr>`:''}</table>
       ${rows(top.map(x=>row(x.i,chip('×'+x.q,'cond')+chip(int(Math.round(x.ev))+' 兩'),Math.round(x.ev/EV.v*100)+'%')))}
-      <p class="small muted" style="margin:6px 0 0">每隻怪物嘅掉落期望價值 × 隻數，再加埋。單價用國際服拍賣所 30 日最低價；城鎮／NPC 有賣嘅道具冇人會喺拍賣買，所以用賣返俾有賣嗰間 NPC 嘅價（約 NPC 賣價 94%）；拍賣所冇價嘅用賣 NPC 價。</p>`);}}}
+      <p class="small muted" style="margin:6px 0 0">每隻怪物嘅掉落期望價值 × 隻數，再加埋。單價用國際服拍賣所 30 日最低價；城鎮／NPC 有賣嘅道具冇人會喺拍賣買，所以用賣返俾有賣嗰間 NPC 嘅價（約城鎮賣價 94%；城鎮價會浮動，呢度用原價估算，想準啲可以喺材料計算自己填價）；拍賣所冇價嘅用賣 NPC 價。</p>`);}}}
   if(t==='npcs'){
     b+=section('所在地點',e.at?rows([row(e.at)]):'');
     b+=npcShopHtml(id);
@@ -1739,7 +1739,7 @@ function gatherEV(m){const T=m.tabs[0];if(!T)return'';const lv=ui.gLv==null||ui.
   return section('採集效益',`<div class="bar" style="margin:0 0 8px;align-items:center;gap:8px"><label class="small">你嘅技術等級 <input type="number" min="1" max="250" data-glv="1" value="${ui.gLv??''}" placeholder="全部" style="width:80px"></label><span class="small">排序</span><button type="button" class="btn${ui.gSort!=='net'?' on':''}" data-gsort="lv">採集等級</button><button type="button" class="btn${ui.gSort==='net'?' on':''}" data-gsort="net">淨賺</button></div>
    <div class="plist">${R.map((x,n)=>`<div class="prow"><span class="pico rank">${ui.gSort==='net'?n+1:x.r[1]}</span><div class="pbody"><div class="phead"><span class="pname">${esc(typeof x.r[0]==='object'?x.r[0].t:x.r[0])}</span>${chip('Lv '+x.r[1])}${x.r[2]&&x.r[2]!=='所有'?chip(String(x.r[2]),'cond'):''}${chip('信用 '+x.r[3])}${chip(x.r[4]+' 分鐘')}${chip('合共 '+int(Math.round(x.tot))+' 兩')}${chip('手續費 '+int(x.fee)+' 兩')}${chip('淨賺 '+int(Math.round(x.best))+' 兩',x.best>0?'hot':'')}</div>
      ${x.L.map(y=>`<div class="small" style="display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;margin:3px 0">${get(y.i)?`<a href="#${esc(y.i)}" style="display:inline-flex;align-items:center;gap:6px">${icon(get(y.i),28)}${esc(nm(get(y.i)))}</a>`:''}<span class="muted">×${fmt(y.q)}${y.lv?'・Lv '+y.lv:''}・${int(y.u.u)} 兩（<span>${srcL(y.u.k)}</span>）</span>${chip('= '+int(Math.round(y.v))+' 兩')}</div>`).join('')||'<div class="small muted">你嘅技術等級未採到任何材料</div>'}</div></div>`).join('')}</div>
-   <p class="small muted" style="margin:8px 0 0">每次採集會得到列出嘅每樣材料，各有固定數量（×後面個數）。價值 = 數量 × 單價，全部加埋就係合共；單價用拍賣所 30 日最低價；城鎮／NPC 有賣嘅材料冇人會喺拍賣買，所以用賣返俾有賣嗰間 NPC 嘅價（約 NPC 賣價 94%）；都冇就用賣 NPC 價。手續費每次採集只收一次，合共減手續費就係淨賺。只計你技術等級夠嘅材料。</p>`);}
+   <p class="small muted" style="margin:8px 0 0">每次採集會得到列出嘅每樣材料，各有固定數量（×後面個數）。價值 = 數量 × 單價，全部加埋就係合共；單價用拍賣所 30 日最低價；城鎮／NPC 有賣嘅材料冇人會喺拍賣買，所以用賣返俾有賣嗰間 NPC 嘅價（約城鎮賣價 94%；城鎮價會浮動，呢度用原價估算，想準啲可以喺材料計算自己填價）；都冇就用賣 NPC 價。手續費每次採集只收一次，合共減手續費就係淨賺。只計你技術等級夠嘅材料。</p>`);}
 function vMisc(k){const m=(SY().misc||{})[k];if(!m)return`<h1>搵唔到</h1>`;return`${crumb([[m.t]])}<h1>${esc(m.t)}</h1><p class="lead">${esc(m.d)}</p>${k==='g_herb'||k==='g_ore'?gatherEV(m):`<section class="card">${miscBody(k)}</section>`}`;}
 
 
